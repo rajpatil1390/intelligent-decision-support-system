@@ -867,7 +867,7 @@ Please do not commit `.env`, anything in `workspace/`, or code from the AutoML-A
 | **Raj Vishwas Patil** | GenAI / Agents Lead | • LLM client (timeouts, capped retries, structured outputs) and prompt templates<br>• Requirement, Knowledge, Model and Insight agents | LinkedIn: `<LINKEDIN_URL>`<br>GitHub: `<GITHUB_URL>` |
 | **Bhavesh Vinod Patil** | ML Engine | • Data module, model zoo, Optuna tuner and trainer<br>• Verifier, SHAP explanations, recommender and the evaluation study | LinkedIn: `<LINKEDIN_URL>`<br>GitHub: `<GITHUB_URL>` |
 | **Chaitany Rajesh Naval** | Backend / API / DB | • Settings, logging, run-state persistence and the code sandbox<br>• FastAPI backend, background worker and SQLite database | LinkedIn: `<LINKEDIN_URL>`<br>GitHub: `<GITHUB_URL>` |
-| **Varun Darshan Patil** | UI / Testing / Docs | • Test harness, synthetic samples and the report builder<br>• Streamlit UI and theme, documentation | LinkedIn: `<LINKEDIN_URL>`<br>GitHub: `<GITHUB_URL>` |
+| **Varun Darshan Chaudhari** | UI / Testing / Docs | • Test harness, synthetic samples and the report builder<br>• Streamlit UI and theme, documentation | LinkedIn: `<LINKEDIN_URL>`<br>GitHub: `<GITHUB_URL>` |
 
 **Project guide:** Dr. Arjun Jadhaw<br>
 **Institution:** Department of Data Science, G H Raisoni College of Engineering & Management, Jalgaon
