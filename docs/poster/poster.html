@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IDSS A4 Poster</title>
+<!-- Source of docs/poster/IDSS_Poster_A4.pdf / .png: scripts/build_poster.py checks every data-fact number
+     against docs/results/evaluation.json and docs/testing.md, then renders this page with Chromium. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --purple: #6C5CE7; --blue: #0984E3; --green: #00B894; --pink: #FD79A8; --yellow: #FDCB6E; --orange: #E17055;
+    --text: #2D3436; --muted: #4F5966; --bg: #F3F4FC; --line: #E4E6F3;
+    --display: Poppins, "Segoe UI", Arial, sans-serif;
+    --body: Inter, "Segoe UI", Poppins, Arial, sans-serif;
+    --gap: 2.4mm;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 210mm; height: 297mm; background: var(--bg); }
+  body {
+    font-family: var(--body); font-size: 9pt; line-height: 1.25; color: var(--text);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .poster { width: 210mm; height: 297mm; overflow: hidden; display: flex; flex-direction: column; }
+  svg.i { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+          stroke-linejoin: round; display: block; }
+  b, strong { font-weight: 700; }
+
+  /* ---------- header band ---------- */
+  header {
+    position: relative; overflow: hidden; color: #fff; flex: none;
+    background: linear-gradient(118deg, #6C5CE7 0%, #5B6CE6 48%, #0984E3 100%);
+    padding: 3mm 6.5mm 3mm;
+  }
+  header::before, header::after { content: ""; position: absolute; border-radius: 50%; }
+  header::before { width: 64mm; height: 64mm; right: -16mm; top: -32mm; background: rgba(255, 255, 255, 0.10); }
+  header::after { width: 44mm; height: 44mm; left: 44mm; bottom: -31mm; background: rgba(253, 121, 168, 0.30); }
+  header > * { position: relative; z-index: 1; }
+  .band-top { display: grid; grid-template-columns: 43mm 1fr 43mm; align-items: center; gap: 3mm; }
+  .logo-slot { width: 43mm; height: 15mm; border-radius: 3mm; background: #fff;
+               box-shadow: 0 0.6mm 2mm rgba(30, 20, 90, 0.28); }
+  .college { text-align: center; }
+  .college-name { font: 700 13pt/1.16 var(--display); }
+  .dept { margin-top: 0.7mm; font: 600 9.5pt/1.2 var(--body); letter-spacing: 1.5pt; text-transform: uppercase; }
+  .guide-box { height: 15mm; border-radius: 3mm; background: rgba(255, 255, 255, 0.15);
+               border: 0.3mm solid rgba(255, 255, 255, 0.5); display: flex; flex-direction: column;
+               justify-content: center; align-items: center; text-align: center; }
+  .guide-box .lbl { font: 600 9pt/1.15 var(--body); letter-spacing: 0.9pt; text-transform: uppercase; }
+  .guide-box .name { font: 700 10.5pt/1.2 var(--display); }
+  .guide-box .ay { font: 500 9pt/1.15 var(--body); letter-spacing: -0.15pt; }
+  h1 { margin: 1.7mm 0 1.8mm; text-align: center; font: 800 24pt/1.06 var(--display); letter-spacing: -0.25pt;
+       text-shadow: 0 0.4mm 1.2mm rgba(30, 20, 90, 0.30); }
+  h1 .accent { color: #FFE3A3; }
+  .team { display: flex; justify-content: center; align-items: center; gap: 1.8mm; }
+  .team .lbl { font: 700 9pt/1 var(--body); letter-spacing: 1.2pt; text-transform: uppercase; margin-right: 0.8mm; }
+  .member { background: rgba(255, 255, 255, 0.95); color: #3B2FA6; border-radius: 10mm; padding: 0.6mm 3.2mm;
+            font: 600 9.5pt/1.2 var(--body); box-shadow: 0 0.3mm 1mm rgba(30, 20, 90, 0.2); }
+
+  /* ---------- body rows ---------- */
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--gap); padding: 2.6mm 6.5mm 0; }
+  .row { display: grid; gap: var(--gap); flex: none; min-height: 0; }
+  .row-2 { grid-template-columns: 72mm 1fr; min-height: 70.5mm; }
+  .row-2 > .card:first-child { justify-content: space-between; }
+  .row-2 .ticks { gap: 1.7mm; }
+  .row-4 { grid-template-columns: 100mm 1fr; }
+  .row-5 { grid-template-columns: 1fr 86mm; flex: 1 1 auto; }
+  .stack { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
+
+  .card {
+    --c: var(--purple);
+    background: #fff; border-radius: 3mm; border-top: 1.2mm solid var(--c); padding: 2mm 3mm 2.4mm;
+    box-shadow: 0 0.5mm 2.2mm rgba(45, 52, 54, 0.10), 0 0.1mm 0.4mm rgba(45, 52, 54, 0.06);
+    display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  .grow { flex: 1 1 auto; }
+  h2 { display: flex; align-items: center; gap: 1.7mm; margin-bottom: 1.4mm; font: 700 13pt/1.15 var(--display); }
+  h2 .ico { flex: none; width: 6mm; height: 6mm; padding: 1.1mm; border-radius: 1.7mm; color: #fff; background: var(--c); }
+  .c-yellow > h2 .ico, h2.c-yellow .ico { color: var(--text); }
+  h2 .sub { margin-left: auto; font: 500 9pt/1.2 var(--body); color: var(--muted); white-space: nowrap; }
+
+  .ticks { list-style: none; display: flex; flex-direction: column; gap: 0.9mm; }
+  .ticks li { position: relative; padding-left: 4mm; }
+  .ticks li::before { content: ""; position: absolute; left: 0.4mm; top: 1.1mm; width: 2mm; height: 2mm;
+                      border-radius: 50%; background: var(--c); }
+  .callout { margin-top: 1.4mm; border-radius: 2mm; padding: 1.2mm 2.2mm; background: #F1EFFE;
+             border-left: 1mm solid var(--purple); }
+
+  .figure { flex: 1 1 0; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; }
+  .figure img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+
+  /* methodology flow */
+  .flow { display: flex; align-items: stretch; }
+  .step { --c: var(--purple); flex: 1 1 auto; display: flex; align-items: center; gap: 1mm; padding: 0.7mm 1.2mm;
+          border-radius: 2.2mm; background: color-mix(in srgb, var(--c) 13%, #fff);
+          border: 0.3mm solid color-mix(in srgb, var(--c) 50%, #fff); }
+  .step .ico { flex: none; width: 5.4mm; height: 5.4mm; padding: 1mm; border-radius: 50%; background: var(--c);
+               color: #fff; }
+  .step.c-yellow .ico { color: var(--text); }
+  .step b { font: 600 9pt/1.12 var(--body); letter-spacing: -0.1pt; }
+  .arrow { flex: none; width: 2.6mm; display: flex; align-items: center; justify-content: center; color: #7C869A; }
+  .arrow svg { width: 2.6mm; height: 2.6mm; stroke-width: 2.8; }
+
+  /* key features */
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6mm; }
+  .tile { --c: var(--purple); border-radius: 2.2mm; padding: 1.3mm 1.8mm; display: flex; align-items: center;
+          gap: 1.6mm; background: color-mix(in srgb, var(--c) 11%, #fff); border-left: 1mm solid var(--c); }
+  .tile .ico { flex: none; width: 6.4mm; height: 6.4mm; padding: 1.2mm; border-radius: 1.7mm; background: var(--c);
+               color: #fff; }
+  .tile.c-yellow .ico { color: var(--text); }
+  .tile b { font: 600 9pt/1.2 var(--body); }
+
+  /* dashboard */
+  .shots { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2.2mm; }
+  .shot { display: flex; flex-direction: column; min-height: 0; border-radius: 1.8mm; overflow: hidden;
+          border: 0.3mm solid #D6DAF0; background: #fff; box-shadow: 0 0.4mm 1.4mm rgba(45, 52, 54, 0.14); }
+  .shot .bar { flex: none; display: flex; align-items: center; gap: 0.7mm; padding: 0.7mm 1.6mm; background: #E9ECFB;
+               font: 600 9pt/1.2 var(--body); }
+  .shot .bar i { flex: none; width: 1.3mm; height: 1.3mm; border-radius: 50%; background: var(--orange); }
+  .shot .bar i:nth-child(2) { background: var(--yellow); } .shot .bar i:nth-child(3) { background: var(--green); }
+  .shot .bar span { margin-left: 1.2mm; }
+  .shot .img { flex: 1 1 0; min-height: 0; overflow: hidden; contain: size; }
+  .shot .img img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+
+  /* results */
+  .kpis { display: grid; grid-template-columns: repeat(5, auto); gap: 1.2mm; flex: none; }
+  .kpi { --c: var(--purple); border-radius: 2.2mm; padding: 1mm 0.6mm 1.1mm; background: #fff; text-align: center;
+         border: 0.3mm solid var(--line); border-top: 1mm solid var(--c); }
+  .kpi .v { display: block; font: 800 15pt/1.06 var(--display); color: color-mix(in srgb, var(--c) 78%, #000); }
+  .kpi .l { display: block; font-size: 9pt; line-height: 1.15; color: var(--muted); white-space: nowrap; }
+  .kpi .l b { color: var(--text); }
+  .figs { flex: 1 1 0; min-height: 0; display: flex; gap: 2.4mm; margin-top: 1.6mm; }
+  .fig { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .fig .cap { flex: none; font: 600 9pt/1.2 var(--body); text-align: center; margin-bottom: 0.5mm; }
+  .fig .cap i { display: inline-block; width: 2.4mm; height: 2.4mm; border-radius: 0.5mm; vertical-align: -0.3mm;
+                margin: 0 0.6mm 0 1.4mm; }
+  .fig .cap-split { display: flex; justify-content: space-between; text-align: left; }
+  .fig .cap-split i:first-child { margin-left: 0; }
+  .fig .cap-note { font-weight: 500; color: var(--muted); }
+  .fig-baseline { flex: 0 0 59mm; }
+  .fig-ablation { flex: 1 1 0; }
+  /* bar charts written by scripts/build_poster.py from evaluation.json (viewBox in mm, labels >= 8 pt) */
+  svg.chart { flex: 1 1 0; min-height: 0; width: 100%; display: block; font-family: var(--body); }
+  svg.chart text[font-weight] { font-variant-numeric: tabular-nums; }
+  .note { flex: none; margin-top: 1.5mm; display: flex; gap: 1.6mm; align-items: center; border-radius: 2mm;
+          padding: 1.1mm 2.2mm; background: #E8F9F4; border-left: 1mm solid var(--green); }
+  .note .ico { flex: none; width: 4.6mm; height: 4.6mm; color: #00A383; }
+
+  /* tech stack, conclusion, future scope */
+  .chips { display: flex; flex-wrap: wrap; gap: 1.2mm; }
+  .chip { --c: var(--purple); display: inline-flex; align-items: center; gap: 0.9mm; border-radius: 10mm;
+          padding: 0.4mm 1.8mm 0.4mm 1.4mm; font: 600 9pt/1.2 var(--body);
+          background: color-mix(in srgb, var(--c) 13%, #fff); border: 0.3mm solid color-mix(in srgb, var(--c) 50%, #fff); }
+  .chip::before { content: ""; width: 1.6mm; height: 1.6mm; border-radius: 50%; background: var(--c); }
+  .chips + .section, .section + .section { margin-top: 2mm; padding-top: 1.8mm; border-top: 0.3mm solid var(--line); }
+
+  /* footer */
+  footer { flex: none; margin-top: var(--gap); padding: 1.5mm 6.5mm 1.3mm; background: #fff; position: relative;
+           display: flex; gap: 4mm; align-items: center; }
+  footer::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 0.8mm;
+                   background: linear-gradient(90deg, #6C5CE7, #0984E3, #00B894, #FDCB6E, #E17055, #FD79A8); }
+  .refs { flex: 1; display: flex; gap: 2.5mm; font-size: 7.5pt; line-height: 1.25; color: var(--muted); }
+  .refs > b { color: var(--text); font: 700 8pt/1.25 var(--display); }
+  .refs ol { list-style: none; }
+  .brand { flex: none; width: 26mm; height: auto; }
+
+  /* colour classes last, so they override each component's default --c */
+  .c-purple { --c: var(--purple); } .c-blue { --c: var(--blue); } .c-green { --c: var(--green); }
+  .c-pink { --c: var(--pink); } .c-yellow { --c: var(--yellow); } .c-orange { --c: var(--orange); }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- ===================== HEADER ===================== -->
+  <header>
+    <div class="band-top">
+      <div class="logo-slot" title="College logo placeholder"></div>
+      <div class="college">
+        <div class="college-name">G H Raisoni College of Engineering and Management, Jalgaon</div>
+        <div class="dept">Department of Data Science</div>
+      </div>
+      <div class="guide-box">
+        <span class="lbl">Project Guide</span>
+        <span class="name">Dr. Arjun Jadhaw</span>
+        <span class="ay">Academic Year 2026–2027</span>
+      </div>
+    </div>
+    <h1>Intelligent Decision Support System Using <span class="accent">Generative AI</span> and <span class="accent">Machine Learning</span></h1>
+    <div class="team">
+      <span class="lbl">Team</span>
+      <span class="member">Raj Vishwas Patil</span>
+      <span class="member">Bhavesh Vinod Patil</span>
+      <span class="member">Chaitany Rajesh Naval</span>
+      <span class="member">Varun Darshan Patil</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== problem, objectives | proposed system ===================== -->
+    <div class="row row-2">
+      <section class="card c-orange">
+        <div class="section">
+          <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg></span>Problem Statement</h2>
+          <p>Teams have questions and data but no data scientists. AutoML stops at a model, and LLM-written code
+             can invent numbers.</p>
+          <p class="callout"><b>Our idea:</b> LLM agents plan and explain; tested code computes every number.</p>
+        </div>
+        <div class="section c-green">
+          <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5L7.5 11M3.5 18l1.5 1.5L7.5 17"/></svg></span>Objectives</h2>
+          <ul class="ticks">
+            <li>Understand plain-language questions</li>
+            <li>Automate model search and tuning</li>
+            <li>Verify every model before it is trusted</li>
+            <li>Explain results and recommend actions</li>
+          </ul>
+        </div>
+      </section>
+      <section class="card c-purple">
+        <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/></svg></span>Proposed System<span class="sub">6 layers · 7 agents · works offline</span></h2>
+        <div class="figure"><img src="assets/architecture.png" alt="IDSS layered system architecture"></div>
+      </section>
+    </div>
+
+    <!-- ===================== methodology ===================== -->
+    <section class="card c-blue row">
+      <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 6H15a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h7.5"/></svg></span>Methodology<span class="sub">resumable state machine · test split read exactly once</span></h2>
+      <div class="flow">
+        <div class="step c-purple"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg></span><b>Upload</b></div>
+        <div class="arrow"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="step c-blue"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-6 4z"/><path d="M8 9h8M8 12.5h5"/></svg></span><b>Requirement<br>Agent</b></div>
+        <div class="arrow"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="step c-green"><span class="ico"><svg class="i" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8"/></svg></span><b>Data<br>Agent</b></div>
+        <div class="arrow"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="step c-orange"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></span><b>AutoML<br>(Optuna)</b></div>
+        <div class="arrow"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="step c-pink"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.3-3 7.7-7 9.5-4-1.8-7-5.2-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span><b>Verifier</b></div>
+        <div class="arrow"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="step c-yellow"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 16v-5M12 16V5M17 16v-8"/></svg></span><b>SHAP +<br>What-If</b></div>
+        <div class="arrow"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="step c-purple"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.8 10.6c.6.6.8 1.3.8 2.4h6c0-1.1.2-1.8.8-2.4A6 6 0 0 0 12 3z"/></svg></span><b>Insight<br>Agent</b></div>
+        <div class="arrow"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="step c-blue"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg></span><b>PDF<br>Report</b></div>
+      </div>
+    </section>
+
+    <!-- ===================== key features | dashboard ===================== -->
+    <div class="row row-4">
+      <section class="card c-pink">
+        <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.4l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg></span>Key Features</h2>
+        <div class="tiles">
+          <div class="tile c-purple"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-6 4z"/><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.6v.1"/></svg></span><b>Natural-language questions</b></div>
+          <div class="tile c-orange"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></span><b>AutoML with HPO</b></div>
+          <div class="tile c-green"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.3-3 7.7-7 9.5-4-1.8-7-5.2-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span><b>Multi-stage verification</b></div>
+          <div class="tile c-blue"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 16v-5M12 16V5M17 16v-8"/></svg></span><b>Explainable AI (SHAP)</b></div>
+          <div class="tile c-yellow"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M6 3v5a4 4 0 0 0 4 4h8"/><path d="M6 21v-5a4 4 0 0 1 4-4"/><path d="M15 9l3 3-3 3"/></svg></span><b>What-if &amp; counterfactual recommendations</b></div>
+          <div class="tile c-pink"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M5 18l2 2 4-4"/></svg></span><b>Grounded GenAI insights: no invented numbers</b></div>
+        </div>
+      </section>
+      <section class="card c-blue">
+        <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>Dashboard<span class="sub">Streamlit UI on a FastAPI backend</span></h2>
+        <div class="shots">
+          <div class="shot"><div class="bar"><i></i><i></i><i></i><span>Results</span></div><div class="img"><img src="assets/screen_results.png" alt="Results page: KPI cards and model leaderboard"></div></div>
+          <div class="shot"><div class="bar"><i></i><i></i><i></i><span>Decision Center</span></div><div class="img"><img src="assets/screen_decision_center.png" alt="Decision Center page: decision brief and risk tiers"></div></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===================== results | tech stack, conclusion, future scope ===================== -->
+    <div class="row row-5">
+      <section class="card c-purple">
+        <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4"/></svg></span>Results<span class="sub"><span data-fact="datasets">5</span> synthetic datasets × <span data-fact="seeds">3</span> seeds · <span data-fact="verified">14/15</span> verified</span></h2>
+        <div class="kpis">
+          <div class="kpi c-green"><span class="v" data-fact="sr">1.00</span><span class="l"><b>SR</b><br>success rate</span></div>
+          <div class="kpi c-blue"><span class="v" data-fact="nps">0.800</span><span class="l"><b>NPS</b><br>performance</span></div>
+          <div class="kpi c-purple"><span class="v" data-fact="cs">0.900</span><span class="l"><b>CS</b><br>overall score</span></div>
+          <div class="kpi c-orange"><span class="v" data-fact="coverage">93%</span><span class="l"><b>Coverage</b><br>of the code</span></div>
+          <div class="kpi c-pink"><span class="v" data-fact="tests">449</span><span class="l"><b>Tests</b><br>automated</span></div>
+        </div>
+        <div class="figs">
+          <div class="fig fig-baseline"><!-- chart:baseline --><div class="cap cap-split"><span><i style="background:#6C5CE7"></i>Our model vs<i style="background:#F2B8A8"></i>baseline</span><span class="cap-note">gain</span></div><svg class="chart" id="chart-baseline" viewBox="0 0 58.6 35.4" font-size="3.0" role="img" aria-label="Our model vs the trivial baseline per dataset"><line x1="19.0" y1="-0.2" x2="19.0" y2="35.050000000000004" stroke="#B8BED3" stroke-width="0.25"/><g><rect x="19.00" y="0.20" width="17.52" height="2.95" rx="0.6" fill="#6C5CE7"/><text x="35.72" y="1.68" text-anchor="end" dominant-baseline="central" fill="#FFFFFF" font-weight="700" class="in">0.649</text></g><g><rect x="19.00" y="3.35" width="0.00" height="2.95" rx="0.6" fill="#F2B8A8"/><text x="19.80" y="4.83" text-anchor="start" dominant-baseline="central" fill="#2D3436" font-weight="700">0.000</text></g><text x="18.00" y="3.25" text-anchor="end" dominant-baseline="central" fill="#2D3436">Churn</text><text x="58.40" y="3.25" text-anchor="end" dominant-baseline="central" fill="#4F5966">—</text><g><rect x="19.00" y="7.25" width="25.36" height="2.95" rx="0.6" fill="#6C5CE7"/><text x="43.56" y="8.72" text-anchor="end" dominant-baseline="central" fill="#FFFFFF" font-weight="700" class="in">0.939</text></g><g><rect x="19.00" y="10.40" width="17.66" height="2.95" rx="0.6" fill="#F2B8A8"/><text x="35.86" y="11.87" text-anchor="end" dominant-baseline="central" fill="#2D3436" font-weight="700" class="in">0.654</text></g><text x="18.00" y="10.30" text-anchor="end" dominant-baseline="central" fill="#2D3436">Crop price</text><text x="58.40" y="10.30" text-anchor="end" dominant-baseline="central" fill="#007A63" font-weight="700">+85.1%</text><g><rect x="19.00" y="14.30" width="25.40" height="2.95" rx="0.6" fill="#6C5CE7"/><text x="43.60" y="15.77" text-anchor="end" dominant-baseline="central" fill="#FFFFFF" font-weight="700" class="in">0.941</text></g><g><rect x="19.00" y="17.45" width="23.55" height="2.95" rx="0.6" fill="#F2B8A8"/><text x="41.75" y="18.93" text-anchor="end" dominant-baseline="central" fill="#2D3436" font-weight="700" class="in">0.872</text></g><text x="18.00" y="17.35" text-anchor="end" dominant-baseline="central" fill="#2D3436">Store sales</text><text x="58.40" y="17.35" text-anchor="end" dominant-baseline="central" fill="#007A63" font-weight="700">+60.5%</text><g><rect x="19.00" y="21.35" width="17.70" height="2.95" rx="0.6" fill="#6C5CE7"/><text x="35.90" y="22.82" text-anchor="end" dominant-baseline="central" fill="#FFFFFF" font-weight="700" class="in">0.656</text></g><g><rect x="19.00" y="24.50" width="10.60" height="2.95" rx="0.6" fill="#F2B8A8"/><text x="28.80" y="25.97" text-anchor="end" dominant-baseline="central" fill="#2D3436" font-weight="700" class="in">0.393</text></g><text x="18.00" y="24.40" text-anchor="end" dominant-baseline="central" fill="#2D3436">Delivery</text><text x="58.40" y="24.40" text-anchor="end" dominant-baseline="central" fill="#007A63" font-weight="700">+67.0%</text><g><rect x="19.00" y="28.40" width="22.02" height="2.95" rx="0.6" fill="#6C5CE7"/><text x="40.22" y="29.88" text-anchor="end" dominant-baseline="central" fill="#FFFFFF" font-weight="700" class="in">0.816</text></g><g><rect x="19.00" y="31.55" width="0.11" height="2.95" rx="0.6" fill="#F2B8A8"/><text x="19.91" y="33.02" text-anchor="start" dominant-baseline="central" fill="#2D3436" font-weight="700">0.004</text></g><text x="18.00" y="31.45" text-anchor="end" dominant-baseline="central" fill="#2D3436">Segments</text><text x="58.40" y="31.45" text-anchor="end" dominant-baseline="central" fill="#4F5966">—</text></svg><!-- /chart:baseline --></div>
+          <div class="fig fig-ablation"><!-- chart:ablation --><div class="cap">Ablation – CS by setup</div><svg class="chart" id="chart-ablation" viewBox="0 0 40.5 35.4" font-size="3.0" role="img" aria-label="Comprehensive score by ablation configuration"><g><rect x="21.10" y="0.30" width="17.28" height="4.40" rx="0.6" fill="#6C5CE7"/><text x="37.58" y="2.50" text-anchor="end" dominant-baseline="central" fill="#FFFFFF" font-weight="700" class="in">0.900</text></g><text x="20.40" y="2.50" text-anchor="end" dominant-baseline="central" fill="#2D3436">Full system</text><g><rect x="21.10" y="6.40" width="17.11" height="4.40" rx="0.6" fill="#DCD7FB"/><text x="37.41" y="8.60" text-anchor="end" dominant-baseline="central" fill="#2D3436" font-weight="700" class="in">0.891</text></g><text x="20.40" y="8.60" text-anchor="end" dominant-baseline="central" fill="#2D3436">− threshold</text><g><rect x="21.10" y="12.50" width="16.73" height="4.40" rx="0.6" fill="#DCD7FB"/><text x="37.03" y="14.70" text-anchor="end" dominant-baseline="central" fill="#2D3436" font-weight="700" class="in">0.871</text></g><text x="20.40" y="14.70" text-anchor="end" dominant-baseline="central" fill="#2D3436">− HPO</text><g><rect x="21.10" y="18.60" width="17.28" height="4.40" rx="0.6" fill="#DCD7FB"/><text x="37.58" y="20.80" text-anchor="end" dominant-baseline="central" fill="#2D3436" font-weight="700" class="in">0.900</text></g><text x="20.40" y="20.80" text-anchor="end" dominant-baseline="central" fill="#2D3436">− re-planning</text><g><rect x="21.10" y="24.70" width="16.39" height="4.40" rx="0.6" fill="#DCD7FB"/><text x="36.69" y="26.90" text-anchor="end" dominant-baseline="central" fill="#2D3436" font-weight="700" class="in">0.854</text></g><text x="20.40" y="26.90" text-anchor="end" dominant-baseline="central" fill="#2D3436">Single model</text><line x1="38.38" y1="-0.10000000000000003" x2="38.38" y2="30.40" stroke="#6C5CE7" stroke-width="0.3" stroke-dasharray="0.8 0.6"/><line x1="21.1" y1="30.40" x2="40.3" y2="30.40" stroke="#B8BED3" stroke-width="0.25"/><text x="21.10" y="33.20" text-anchor="start" dominant-baseline="central" fill="#4F5966">0</text><text x="30.70" y="33.20" text-anchor="middle" dominant-baseline="central" fill="#4F5966">0.5</text><text x="40.30" y="33.20" text-anchor="end" dominant-baseline="central" fill="#4F5966">1</text></svg><!-- /chart:ablation --></div>
+        </div>
+        <p class="note"><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></span>
+          <span><b>Threshold tuning</b> lifts churn F1 from <span data-fact="churn_f1_fixed">0.561</span> to
+          <span data-fact="churn_f1">0.649</span>.</span></p>
+      </section>
+      <section class="card c-yellow">
+        <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></svg></span>Technology Stack</h2>
+        <div class="chips">
+          <span class="chip c-blue">Python</span><span class="chip c-orange">scikit-learn</span><span class="chip c-green">XGBoost</span>
+          <span class="chip c-pink">SHAP</span><span class="chip c-purple">LightGBM</span><span class="chip c-blue">Optuna</span>
+          <span class="chip c-green">FastAPI</span><span class="chip c-blue">SQLite</span><span class="chip c-orange">Streamlit</span>
+          <span class="chip c-purple">LLM (OpenAI-compatible)</span>
+        </div>
+        <div class="section c-green">
+          <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></svg></span>Conclusion</h2>
+          <p>IDSS turns a plain-language question and a table into a verified model and explained, actionable
+             decisions.</p>
+        </div>
+        <div class="section c-orange">
+          <h2><span class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>Future Scope</h2>
+          <ul class="ticks">
+            <li>Studies on real data with users</li>
+            <li>Benchmark the LLM path and its cost</li>
+            <li>Causal, cost-aware recommendations</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer>
+    <div class="refs">
+      <b>References</b>
+      <ol>
+        <li>[1] P. Trirat et al., “AutoML-Agent: A Multi-Agent LLM Framework for Full-Pipeline AutoML”, ICML 2025.</li>
+        <li>[2] S. M. Lundberg, S.-I. Lee, “A Unified Approach to Interpreting Model Predictions”, NeurIPS 2017.</li>
+        <li>[3] T. Akiba et al., “Optuna: A Next-generation Hyperparameter Optimization Framework”, KDD 2019.</li>
+      </ol>
+    </div>
+    <svg class="brand" viewBox="0 0 280 72" role="img" aria-label="IDSS logo">
+      <defs><linearGradient id="idss-logo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6C5CE7"/><stop offset="0.5" stop-color="#5A6FE6"/><stop offset="1" stop-color="#0984E3"/></linearGradient></defs>
+      <rect width="280" height="72" rx="18" fill="url(#idss-logo)"/>
+      <circle cx="252" cy="6" r="34" fill="#ffffff" fill-opacity="0.12"/>
+      <rect x="12" y="12" width="48" height="48" rx="14" fill="#ffffff" fill-opacity="0.2" stroke="#ffffff" stroke-opacity="0.4"/>
+      <rect x="21" y="38" width="7" height="14" rx="2.5" fill="#ffffff"/>
+      <rect x="32.5" y="29" width="7" height="23" rx="2.5" fill="#ffffff"/>
+      <rect x="44" y="21" width="7" height="31" rx="2.5" fill="#FDCB6E"/>
+      <circle cx="47.5" cy="16" r="3" fill="#00B894" stroke="#ffffff" stroke-width="1.2"/>
+      <text x="74" y="38" font-family="Poppins, Segoe UI, Arial, sans-serif" font-size="29" font-weight="800" fill="#ffffff" letter-spacing="2">IDSS</text>
+      <text x="75" y="56" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#ffffff">Decision Support · GenAI + ML</text>
+    </svg>
+  </footer>
+</div>
+</body>
+</html>

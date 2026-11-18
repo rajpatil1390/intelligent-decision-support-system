@@ -1,0 +1,414 @@
+{
+  "description": "Ordered list of every numbered figure, table, algorithm and listing in docs/report/ (Step 10A). Figure paths are relative to the repository root; numbering is by chapter.",
+  "figures": [
+    {
+      "number": "3.1",
+      "caption": "Eight-week project plan (Gantt chart)",
+      "file": "ch3_planning_management.md",
+      "path": "docs/diagrams/eight_week_timeline.png"
+    },
+    {
+      "number": "4.1",
+      "caption": "System architecture of IDSS",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/system_architecture.png"
+    },
+    {
+      "number": "4.2",
+      "caption": "Data flow diagram, Level 0 (context diagram)",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/dfd_level0.png"
+    },
+    {
+      "number": "4.3",
+      "caption": "Data flow diagram, Level 1",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/data_flow.png"
+    },
+    {
+      "number": "4.4",
+      "caption": "Use case diagram",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/use_case.png"
+    },
+    {
+      "number": "4.5",
+      "caption": "Class diagram of the main classes",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/class_diagram.png"
+    },
+    {
+      "number": "4.6",
+      "caption": "Sequence diagram of one analysis run",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/sequence_one_run.png"
+    },
+    {
+      "number": "4.7",
+      "caption": "State chart diagram of a run",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/agent_workflow.png"
+    },
+    {
+      "number": "4.8",
+      "caption": "Activity diagram of one analysis",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/activity_diagram.png"
+    },
+    {
+      "number": "4.9",
+      "caption": "Component and deployment diagram",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/deployment_diagram.png"
+    },
+    {
+      "number": "4.10",
+      "caption": "Entity–relationship diagram of the database",
+      "file": "ch4_analysis_design.md",
+      "path": "docs/diagrams/er_diagram.png"
+    },
+    {
+      "number": "5.1",
+      "caption": "Home page: overview, Demo Mode, four-step flow, KPI strip and recent runs",
+      "file": "ch5_implementation.md",
+      "path": "docs/screenshots/01_home.png"
+    },
+    {
+      "number": "5.2",
+      "caption": "Upload Data page: profile of `store_sales.csv` with types, missing values and suggested target and task",
+      "file": "ch5_implementation.md",
+      "path": "docs/screenshots/02_upload_profile.png"
+    },
+    {
+      "number": "5.3",
+      "caption": "Run Monitor: pipeline stages, progress and event timeline of the churn run while it trains",
+      "file": "ch5_implementation.md",
+      "path": "docs/screenshots/04_run_monitor.png"
+    },
+    {
+      "number": "5.4",
+      "caption": "Results page: test metrics with leaderboard, verification, key-driver and chart tabs",
+      "file": "ch5_implementation.md",
+      "path": "docs/screenshots/05_results.png"
+    },
+    {
+      "number": "5.5",
+      "caption": "Decision Center: executive summary, key findings, risk tiers and recommended actions for the churn run",
+      "file": "ch5_implementation.md",
+      "path": "docs/screenshots/06_decision_center.png"
+    },
+    {
+      "number": "5.6",
+      "caption": "What-if simulator: a typical customer with `contract_type` changed to \"Two year\", prediction before and after",
+      "file": "ch5_implementation.md",
+      "path": "docs/screenshots/07_what_if.png"
+    },
+    {
+      "number": "5.7",
+      "caption": "Decision Center for the store-sales run: forecast with its uncertainty band",
+      "file": "ch5_implementation.md",
+      "path": "docs/screenshots/08_forecast.png"
+    },
+    {
+      "number": "7.1",
+      "caption": "Model versus trivial baseline on the held-out test split (normalised score)",
+      "file": "ch7_results.md",
+      "path": "docs/results/figures/benchmark_vs_baseline.png"
+    },
+    {
+      "number": "7.2",
+      "caption": "Paper-style metrics (SR, NPS, CS) per dataset",
+      "file": "ch7_results.md",
+      "path": "docs/results/figures/paper_metrics.png"
+    },
+    {
+      "number": "7.3",
+      "caption": "Ablation study: change of the test score per component and overall CS",
+      "file": "ch7_results.md",
+      "path": "docs/results/figures/ablation.png"
+    },
+    {
+      "number": "7.4",
+      "caption": "Robustness: change of the test score with 10% extra missing values and with 5 noisy columns",
+      "file": "ch7_results.md",
+      "path": "docs/results/figures/robustness.png"
+    },
+    {
+      "number": "7.5",
+      "caption": "Efficiency: AutoML training time per run and inference latency per row",
+      "file": "ch7_results.md",
+      "path": "docs/results/figures/efficiency.png"
+    }
+  ],
+  "tables": [
+    {
+      "number": "1.1",
+      "caption": "Comparison of life cycle models for IDSS",
+      "file": "ch1_introduction.md"
+    },
+    {
+      "number": "2.1",
+      "caption": "Broad stages in the evolution of decision support",
+      "file": "ch2_literature_review.md"
+    },
+    {
+      "number": "2.2",
+      "caption": "Ideas kept from AutoML-Agent",
+      "file": "ch2_literature_review.md"
+    },
+    {
+      "number": "2.3",
+      "caption": "Design decisions changed in IDSS",
+      "file": "ch2_literature_review.md"
+    },
+    {
+      "number": "2.4",
+      "caption": "Comparison of related work with IDSS",
+      "file": "ch2_literature_review.md"
+    },
+    {
+      "number": "3.1",
+      "caption": "Feasibility summary",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "3.2",
+      "caption": "Risk analysis",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "3.3",
+      "caption": "Project schedule and milestones",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "3.4",
+      "caption": "Team roles",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "3.5",
+      "caption": "Planned effort allocation per member per week (one person-week per cell)",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "3.6",
+      "caption": "Source lines of code (Python)",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "3.7",
+      "caption": "Basic COCOMO (organic) estimate and actual effort",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "3.8",
+      "caption": "Actual cost",
+      "file": "ch3_planning_management.md"
+    },
+    {
+      "number": "4.1",
+      "caption": "Functional requirements",
+      "file": "ch4_analysis_design.md"
+    },
+    {
+      "number": "4.2",
+      "caption": "Non-functional requirements",
+      "file": "ch4_analysis_design.md"
+    },
+    {
+      "number": "4.3",
+      "caption": "Data requirements",
+      "file": "ch4_analysis_design.md"
+    },
+    {
+      "number": "4.4",
+      "caption": "Hardware requirements",
+      "file": "ch4_analysis_design.md"
+    },
+    {
+      "number": "4.5",
+      "caption": "Software requirements",
+      "file": "ch4_analysis_design.md"
+    },
+    {
+      "number": "4.6",
+      "caption": "Architectural layers",
+      "file": "ch4_analysis_design.md"
+    },
+    {
+      "number": "4.7",
+      "caption": "Database tables",
+      "file": "ch4_analysis_design.md"
+    },
+    {
+      "number": "5.1",
+      "caption": "Development tools",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.2",
+      "caption": "Development hardware",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.3",
+      "caption": "Modules and responsibilities",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.4",
+      "caption": "Model zoo and baselines",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.5",
+      "caption": "REST API endpoints",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "6.1",
+      "caption": "Black-box and white-box testing in IDSS",
+      "file": "ch6_testing.md"
+    },
+    {
+      "number": "6.2",
+      "caption": "Test inventory",
+      "file": "ch6_testing.md"
+    },
+    {
+      "number": "6.3",
+      "caption": "Code coverage per package",
+      "file": "ch6_testing.md"
+    },
+    {
+      "number": "6.4",
+      "caption": "Test cases",
+      "file": "ch6_testing.md"
+    },
+    {
+      "number": "6.5",
+      "caption": "Security tests (all passed)",
+      "file": "ch6_testing.md"
+    },
+    {
+      "number": "7.1",
+      "caption": "Evaluation datasets (synthetic, seeded)",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "7.2",
+      "caption": "Main benchmark (full system, clean data, mean ± std over 3 seeds)",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "7.3",
+      "caption": "SR, NPS and CS (mean ± std over 3 seeds)",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "7.4",
+      "caption": "Ablation study (mean ± std over 3 seeds)",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "7.5",
+      "caption": "Robustness (mean ± std over 3 seeds; change vs clean data, negative = worse)",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "7.6",
+      "caption": "Threshold tuning on churn (single demo run, seed 42: logistic regression, test split)",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "7.7",
+      "caption": "Clustering results with ARI and RI (Segments, mean ± std over 3 seeds)",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "7.8",
+      "caption": "Runs that did not pass verification",
+      "file": "ch7_results.md"
+    },
+    {
+      "number": "A.1",
+      "caption": "Pages of the user interface",
+      "file": "appendix_a_user_manual.md"
+    },
+    {
+      "number": "A.2",
+      "caption": "Common problems",
+      "file": "appendix_a_user_manual.md"
+    }
+  ],
+  "algorithms": [
+    {
+      "number": "5.1",
+      "caption": "Orchestrator state machine (`Orchestrator.step`, `run_until_blocked`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.2",
+      "caption": "Requirement parsing and repair (`RequirementAgent.parse`, `repair`, `check_sufficiency`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.3",
+      "caption": "AutoML search, selection and single test evaluation (`AutoMLTrainer.run`, `tuner.tune`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.4",
+      "caption": "Decision-threshold tuning (`evaluator.tune_threshold`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.5",
+      "caption": "Verification and re-planning (`Verifier.verify`, `Orchestrator._handle_verify`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.6",
+      "caption": "Greedy counterfactual search (`recommender.counterfactual`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.7",
+      "caption": "Grounded insight generation (`InsightAgent.generate`, `unsupported_numbers`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.8",
+      "caption": "Sandboxed execution of LLM-written code (`sandbox.check_code`, `run_code`)",
+      "file": "ch5_implementation.md"
+    }
+  ],
+  "listings": [
+    {
+      "number": "5.1",
+      "caption": "One step of the state machine — failures end the run cleanly (`idss/agents/manager.py`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.2",
+      "caption": "The audited test split (`idss/ml/trainer.py`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.3",
+      "caption": "Decision-threshold search (`idss/ml/evaluator.py`, inside `tune_threshold`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.4",
+      "caption": "Static guard of the sandbox (`idss/execution/sandbox.py`, inside `check_code`)",
+      "file": "ch5_implementation.md"
+    },
+    {
+      "number": "5.5",
+      "caption": "Grounding check of the decision brief (`idss/agents/insight_agent.py`)",
+      "file": "ch5_implementation.md"
+    }
+  ]
+}

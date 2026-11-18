@@ -1,0 +1,40 @@
+# Streamlit settings for the IDSS UI (read when Streamlit is started from the project root, as scripts\run_ui.ps1 does).
+# Palette (same as the report figures): #6C5CE7 purple, #00B894 green, #FD79A8 pink, #FDCB6E yellow, #0984E3 blue,
+# #E17055 orange. Extra styling (hero banners, cards, chips, footer) lives in ui/styles.py + ui/style.css.
+
+[theme]
+base = "light"
+primaryColor = "#6C5CE7"
+backgroundColor = "#F8F9FE"
+secondaryBackgroundColor = "#EEF0FF"
+textColor = "#2D3436"
+font = "sans-serif"
+linkColor = "#5B4BD5"
+borderColor = "#DCDDF3"
+baseRadius = "12px"
+buttonRadius = "12px"
+showSidebarBorder = false
+dataframeHeaderBackgroundColor = "#E6E3FF"
+dataframeHeaderTextColor = "#3B2DB0"
+dataframeBorderColor = "#E3E4F6"
+chartCategoricalColors = ["#6C5CE7", "#00B894", "#FD79A8", "#FDCB6E", "#0984E3", "#E17055"]
+violetColor = "#6C5CE7"
+greenColor = "#00B894"
+blueColor = "#0984E3"
+orangeColor = "#E17055"
+yellowColor = "#FDCB6E"
+
+[theme.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1EFFF"
+borderColor = "#E6E4FA"
+
+[server]
+address = "localhost"  # this machine only, like the API (127.0.0.1)
+maxUploadSize = 50  # MB, the same limit as the backend
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"

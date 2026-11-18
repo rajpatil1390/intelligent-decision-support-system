@@ -1,0 +1,47 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "IDSS: Intelligent Decision Support System Using Generative AI and Machine Learning"
+type: software
+version: 1.0.0
+license: MIT
+abstract: >-
+  IDSS turns a business question in plain language and an uploaded table into a verified
+  machine-learning model with explained, actionable decisions. LLM agents parse the requirement,
+  plan the work and explain the results; a deterministic AutoML engine (scikit-learn, XGBoost,
+  LightGBM, Optuna) trains, tunes and verifies the models; a decision layer adds SHAP explanations,
+  risk tiers, what-if simulation, recommendations and a PDF report.
+keywords:
+  - decision support system
+  - AutoML
+  - large language models
+  - multi-agent systems
+  - explainable AI
+  - SHAP
+  - what-if analysis
+authors:
+  - given-names: Raj Vishwas
+    family-names: Patil
+    affiliation: "G H Raisoni College of Engineering and Management, Jalgaon"
+  - given-names: Bhavesh Vinod
+    family-names: Patil
+    affiliation: "G H Raisoni College of Engineering and Management, Jalgaon"
+  - given-names: Chaitany Rajesh
+    family-names: Naval
+    affiliation: "G H Raisoni College of Engineering and Management, Jalgaon"
+  - given-names: Varun Darshan
+    family-names: Patil
+    affiliation: "G H Raisoni College of Engineering and Management, Jalgaon"
+references:
+  - type: conference-paper
+    title: "AutoML-Agent: A Multi-Agent LLM Framework for Full-Pipeline AutoML"
+    authors:
+      - given-names: Patara
+        family-names: Trirat
+      - given-names: Wonyong
+        family-names: Jeong
+      - given-names: Sung Ju
+        family-names: Hwang
+    year: 2025
+    conference:
+      name: "Forty-second International Conference on Machine Learning (ICML 2025)"
+    url: "https://openreview.net/forum?id=p1UBWkOvZm"

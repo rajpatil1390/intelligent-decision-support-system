@@ -1,0 +1,41 @@
+# IDSS runtime + dev dependencies (Python 3.12). Pinned for reproducibility.
+
+# Config & validation
+pydantic==2.13.5
+pydantic-settings==2.15.0
+python-dotenv==1.2.4
+
+# LLM (any OpenAI-compatible endpoint: OpenAI, Groq, Gemini, Ollama)
+openai==3.24.0
+
+# Data & ML
+pandas==3.0.6
+numpy==2.5.3
+openpyxl==3.1.5
+pyarrow==25.0.1
+scikit-learn==1.9.1
+xgboost==3.4.1
+lightgbm==4.7.0
+optuna==5.0.0
+shap==0.52.0
+
+# API & UI
+fastapi==0.142.2
+uvicorn==0.54.0
+python-multipart==0.0.32  # file uploads (POST /datasets)
+streamlit==1.65.0
+requests==2.34.2  # UI -> API client (ui/api_client.py)
+plotly==7.1.0  # UI charts (ui/charts.py)
+
+# Storage, logging, reporting
+sqlalchemy==2.1.3
+loguru==0.7.3
+reportlab==5.0.1
+matplotlib==3.11.2
+
+# Testing and code quality (development)
+pytest==9.1.1
+httpx2==2.13.1  # FastAPI TestClient
+pytest-cov==7.1.0  # coverage: pytest --cov=idss --cov=api --cov=ui --cov=configs
+ruff==0.16.10  # lint: ruff check . (settings in ruff.toml)
+playwright==1.63.0  # UI screenshots: scripts/make_screenshots.py (then: python -m playwright install chromium)

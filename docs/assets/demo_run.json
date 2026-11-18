@@ -1,0 +1,407 @@
+{
+  "note": "Offline demo run recorded by scripts/make_demo_gif.py (Demo Mode, fast budget, no LLM).",
+  "question": "Which customers are likely to churn, and what should we do to retain them?",
+  "requirement": {
+    "user": {
+      "intent": "build",
+      "expertise": "medium"
+    },
+    "problem": {
+      "task_type": "tabular_classification",
+      "description": "Which customers are likely to churn, and what should we do to retain them?",
+      "domain": "",
+      "performance_metrics": [
+        {
+          "name": "f1",
+          "target": null
+        }
+      ],
+      "constraints": []
+    },
+    "datasets": [
+      {
+        "name": "customer_churn.csv",
+        "description": "",
+        "source": "upload",
+        "path": "customer_churn.csv",
+        "target_column": "churn",
+        "preprocessing": []
+      }
+    ],
+    "models": [],
+    "confidence": 1.0,
+    "missing_info": [],
+    "actionable_features": [],
+    "system_notes": []
+  },
+  "task_type": "tabular_classification",
+  "target": "churn",
+  "best_model": "logistic_regression",
+  "primary_metric": "f1",
+  "rows": 3000,
+  "test_metrics": {
+    "accuracy": 0.693333,
+    "balanced_accuracy": 0.712197,
+    "f1": 0.622951,
+    "precision": 0.524138,
+    "recall": 0.767677,
+    "roc_auc": 0.773757,
+    "log_loss": 0.527871,
+    "confusion_matrix": [
+      [
+        132,
+        69
+      ],
+      [
+        23,
+        76
+      ]
+    ],
+    "class_labels": [
+      "No",
+      "Yes"
+    ],
+    "positive_class": "Yes",
+    "n_test_rows": 300
+  },
+  "test_metrics_default_threshold": {
+    "accuracy": 0.72,
+    "balanced_accuracy": 0.673149,
+    "f1": 0.557895,
+    "precision": 0.582418,
+    "recall": 0.535354,
+    "roc_auc": 0.773757,
+    "log_loss": 0.527871,
+    "confusion_matrix": [
+      [
+        163,
+        38
+      ],
+      [
+        46,
+        53
+      ]
+    ]
+  },
+  "decision_threshold": 0.32,
+  "verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "metric_targets",
+        "passed": true
+      },
+      {
+        "name": "beats_baseline",
+        "passed": true
+      },
+      {
+        "name": "constraints",
+        "passed": true
+      },
+      {
+        "name": "test_size",
+        "passed": true
+      },
+      {
+        "name": "test_set_used_once",
+        "passed": true
+      },
+      {
+        "name": "no_leakage",
+        "passed": true
+      },
+      {
+        "name": "overfitting",
+        "passed": true
+      }
+    ]
+  },
+  "leaderboard": [
+    {
+      "rank": 1,
+      "model": "logistic_regression",
+      "status": "ok",
+      "valid_score": 0.646288,
+      "train_time_s": 0.48,
+      "inference_ms_per_row": 0.0193,
+      "model_size_kb": 1.05,
+      "n_trials": 15,
+      "selected": true
+    },
+    {
+      "rank": 2,
+      "model": "random_forest",
+      "status": "ok",
+      "valid_score": 0.6375,
+      "train_time_s": 0.197,
+      "inference_ms_per_row": 0.0733,
+      "model_size_kb": 6113.27,
+      "n_trials": 15,
+      "selected": false
+    },
+    {
+      "rank": 3,
+      "model": "lightgbm",
+      "status": "ok",
+      "valid_score": 0.623094,
+      "train_time_s": 1.178,
+      "inference_ms_per_row": 0.068,
+      "model_size_kb": 2029.38,
+      "n_trials": 15,
+      "selected": false
+    }
+  ],
+  "drivers": {
+    "method": "shap_linear",
+    "output": "probability that churn = 'Yes'",
+    "features": [
+      {
+        "feature": "contract_type",
+        "importance": 1.075293,
+        "share": 0.3375,
+        "direction": "mixed",
+        "detail": "Highest for contract_type = 'Month-to-month', lowest for 'Two year'."
+      },
+      {
+        "feature": "tenure_months",
+        "importance": 0.62963,
+        "share": 0.1976,
+        "direction": "decreases",
+        "detail": "Higher tenure_months decreases the probability that churn = 'Yes'."
+      },
+      {
+        "feature": "payment_method",
+        "importance": 0.400249,
+        "share": 0.1256,
+        "direction": "mixed",
+        "detail": "Highest for payment_method = 'Electronic check', lowest for 'Credit card'."
+      },
+      {
+        "feature": "monthly_charges",
+        "importance": 0.284017,
+        "share": 0.0891,
+        "direction": "increases",
+        "detail": "Higher monthly_charges increases the probability that churn = 'Yes'."
+      },
+      {
+        "feature": "support_calls",
+        "importance": 0.277147,
+        "share": 0.087,
+        "direction": "increases",
+        "detail": "Higher support_calls increases the probability that churn = 'Yes'."
+      },
+      {
+        "feature": "internet_service",
+        "importance": 0.18632,
+        "share": 0.0585,
+        "direction": "mixed",
+        "detail": "Highest for internet_service = 'Fiber optic', lowest for 'No internet'."
+      },
+      {
+        "feature": "region",
+        "importance": 0.112676,
+        "share": 0.0354,
+        "direction": "mixed",
+        "detail": "Highest for region = 'West', lowest for 'Central'."
+      },
+      {
+        "feature": "senior_citizen",
+        "importance": 0.09284,
+        "share": 0.0291,
+        "direction": "mixed",
+        "detail": "Highest for senior_citizen = '1', lowest for '0'."
+      },
+      {
+        "feature": "signup_date",
+        "importance": 0.065528,
+        "share": 0.0206,
+        "direction": "mixed",
+        "detail": ""
+      },
+      {
+        "feature": "total_charges",
+        "importance": 0.062387,
+        "share": 0.0196,
+        "direction": "decreases",
+        "detail": "Higher total_charges decreases the probability that churn = 'Yes'."
+      }
+    ],
+    "n_samples": 500,
+    "notes": []
+  },
+  "risk_tiers": [
+    {
+      "name": "High",
+      "min_probability": 0.4609,
+      "max_probability": 1.0,
+      "count": 900,
+      "share": 0.3,
+      "avg_probability": 0.6512,
+      "top_drivers": [
+        "contract_type",
+        "tenure_months",
+        "payment_method"
+      ]
+    },
+    {
+      "name": "Medium",
+      "min_probability": 0.32,
+      "max_probability": 0.4609,
+      "count": 447,
+      "share": 0.149,
+      "avg_probability": 0.386,
+      "top_drivers": [
+        "contract_type",
+        "tenure_months",
+        "payment_method"
+      ]
+    },
+    {
+      "name": "Low",
+      "min_probability": 0.0,
+      "max_probability": 0.32,
+      "count": 1653,
+      "share": 0.551,
+      "avg_probability": 0.1405,
+      "top_drivers": [
+        "contract_type",
+        "tenure_months",
+        "monthly_charges"
+      ]
+    }
+  ],
+  "tier_cutoffs": {
+    "high": 0.4609,
+    "medium": 0.32,
+    "percentile": 70,
+    "percentile_value": 0.4609
+  },
+  "recommendations": [
+    {
+      "action": "Prioritise the 900 high-risk records (30.0%) for proactive action.",
+      "rationale": "They have a predicted probability of churn = 'Yes' of at least 0.46 (the top 30% of scores); on the test split, 52% of records flagged at the decision threshold of 0.32 were truly 'Yes', and this tier is the most confident part of that group.",
+      "expected_impact": 586.06,
+      "impact_unit": "expected 'Yes' cases in the high-risk tier",
+      "confidence": "medium",
+      "evidence": {
+        "high_tier_count": 900,
+        "high_tier_share": 0.3,
+        "expected_positive_cases": 586.06,
+        "high_cutoff": 0.4609,
+        "threshold": 0.32,
+        "test_precision": 0.524138
+      }
+    },
+    {
+      "action": "Move high-risk records to contract_type = 'Two year'.",
+      "rationale": "This change is part of the minimal change set for 20 of 20 high-risk records tested; applied to all 900 high-risk records it moves the average probability that churn = 'Yes' from 0.651 to 0.193.",
+      "expected_impact": -0.4577,
+      "impact_unit": "change in average probability that churn = 'Yes' (high-risk tier)",
+      "confidence": "high",
+      "evidence": {
+        "high_tier_count": 900,
+        "avg_probability_before": 0.651175,
+        "avg_probability_after": 0.193476,
+        "counterfactual_records": 20,
+        "counterfactual_successes": 20,
+        "change_occurrences": 20,
+        "counterfactual_success_rate": 1.0
+      }
+    },
+    {
+      "action": "Lower support_calls towards 0 for high-risk records (currently about 1.85 on average).",
+      "rationale": "This change is part of the minimal change set for 13 of 20 high-risk records tested; applied to all 900 high-risk records it moves the average probability that churn = 'Yes' from 0.651 to 0.538.",
+      "expected_impact": -0.1136,
+      "impact_unit": "change in average probability that churn = 'Yes' (high-risk tier)",
+      "confidence": "high",
+      "evidence": {
+        "high_tier_count": 900,
+        "avg_probability_before": 0.651175,
+        "avg_probability_after": 0.537601,
+        "counterfactual_records": 20,
+        "counterfactual_successes": 20,
+        "change_occurrences": 13,
+        "counterfactual_success_rate": 1.0
+      }
+    }
+  ],
+  "counterfactual_example": {
+    "row_index": 2619,
+    "probability_before": 0.9846,
+    "probability_after": 0.1606,
+    "threshold": 0.32,
+    "success": true,
+    "changes": [
+      {
+        "feature": "contract_type",
+        "before": "Month-to-month",
+        "after": "Two year"
+      },
+      {
+        "feature": "support_calls",
+        "before": 8,
+        "after": 0
+      },
+      {
+        "feature": "monthly_charges",
+        "before": 96.76,
+        "after": 18.0
+      }
+    ]
+  },
+  "what_if_example": {
+    "output": "probability that churn = 'Yes'",
+    "before": 0.9845721298120995,
+    "after": 0.8562568857266404,
+    "delta": -0.128315,
+    "delta_pct": -13.0326,
+    "changes": {
+      "contract_type": "Two year"
+    },
+    "warnings": []
+  },
+  "insight": {
+    "executive_summary": "Goal: Which customers are likely to churn, and what should we do to retain them? We treated this as a classification problem (predicting a category). The best model (logistic_regression) scored f1 = 0.623 on held-out test data, against 0 for a simple majority class baseline. The strongest drivers are contract_type, tenure_months and payment_method. 900 records (30.0%) are in the high-risk tier.",
+    "key_findings": [
+      "Model quality: f1 = 0.623 on test data with logistic_regression (decision threshold 0.32).",
+      "contract_type accounts for 34% of the model's explanation; Highest for contract_type = 'Month-to-month', lowest for 'Two year'.",
+      "tenure_months accounts for 20% of the model's explanation; Higher tenure_months decreases the probability that churn = 'Yes'.",
+      "payment_method accounts for 13% of the model's explanation; Highest for payment_method = 'Electronic check', lowest for 'Credit card'.",
+      "Risk tiers: High 900, Medium 447, Low 1,653 records (High from probability 0.4609, Medium from the decision threshold 0.32)."
+    ],
+    "recommended_actions": [
+      "Prioritise the 900 high-risk records (30.0%) for proactive action. Expected impact: 586.1 (expected 'Yes' cases in the high-risk tier); confidence medium.",
+      "Move high-risk records to contract_type = 'Two year'. Expected impact: -0.4577 (change in average probability that churn = 'Yes' (high-risk tier)); confidence high.",
+      "Lower support_calls towards 0 for high-risk records (currently about 1.85 on average). Expected impact: -0.1136 (change in average probability that churn = 'Yes' (high-risk tier)); confidence high."
+    ],
+    "risks_and_limitations": [
+      "The model shows associations in historical data, not guaranteed cause and effect; test changes on a small group before rolling them out.",
+      "What-if results assume all other inputs stay the same."
+    ],
+    "next_steps": [
+      "Validate the top recommendation with a controlled pilot and a comparison group.",
+      "Share the key drivers with domain experts to confirm they make business sense.",
+      "Retrain the model regularly as new data arrives."
+    ],
+    "generated_by": "template",
+    "grounding": null
+  },
+  "report": {
+    "pdf": true,
+    "markdown": true
+  },
+  "events": [
+    "Run created.",
+    "Request is relevant. Profiled data: 3,000 rows x 12 columns.",
+    "Parsed requirement: task=tabular_classification, target=churn, confidence=1.00.",
+    "Requirement is complete.",
+    "Prepared data: train/valid/test = 2,100/600/300 rows. Knowledge brief: 4 insight(s) from 2 source(s).",
+    "Plan (default): optimise f1 with lightgbm, logistic_regression, random_forest (fast mode, 15 trials each).",
+    "Trained 3 model(s) in 39.7s; best: logistic_regression (f1 = 0.6230 on held-out test data).",
+    "Verification passed (7 checks).",
+    "Explained the model (shap_linear); top drivers: contract_type, tenure_months, payment_method; 3 recommendation(s).",
+    "Decision brief written by template.",
+    "Wrote report.pdf and report.md."
+  ]
+}

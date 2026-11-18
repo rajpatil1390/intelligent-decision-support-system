@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IDSS One-Page Report</title>
+<!-- Source of docs/one_page/IDSS_One_Page_Report.pdf / .png (Step 13). scripts/build_one_page.py writes the results
+     table from docs/results/evaluation.json, checks every number against evaluation.json / docs/testing.md, then
+     renders this page with Chromium. Layout and style follow docs/format/one_page_report_reference.pdf. -->
+<style>
+  /* Inter as static weights (a variable font would be embedded as Type3); Segoe UI when offline */
+  @font-face { font-family: "Inter Static"; font-weight: 400; src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/files/inter-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Inter Static"; font-weight: 500; src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/files/inter-latin-500-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Inter Static"; font-weight: 600; src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/files/inter-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Inter Static"; font-weight: 700; src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/files/inter-latin-700-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Inter Static"; font-weight: 800; src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/files/inter-latin-800-normal.woff2") format("woff2"); }
+
+  @page { size: A4; margin: 0; }
+  :root {
+    --navy: #1E3A8A; --orange: #EA580C; --orange-text: #C2410C; --teal: #0D9488;
+    --ink: #1F2937; --muted: #4B5563; --rule: #E5E7EB; --shade: #F9FAFB; --sky: #DBEAFE; --peach: #FFEDD5;
+    --banner-label: #C7D2FE; --ok: #15803D; --bad: #DC2626;
+    --font: "Inter Static", "Segoe UI", Arial, sans-serif;
+    --fs-body: 8.5pt; --lh: 1.32;
+    --fs-table: 7.5pt; --fs-small: 7.6pt;
+    --side: 7.9mm;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 210mm; height: 297mm; background: #fff; }
+  body {
+    font-family: var(--font); font-size: var(--fs-body); line-height: var(--lh); color: var(--ink);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .page { width: 210mm; height: 297mm; overflow: hidden; display: flex; flex-direction: column;
+          padding: 6.9mm var(--side) 5.2mm; }
+  b, strong { font-weight: 700; }
+
+  /* ---------- masthead ---------- */
+  .masthead { flex: none; display: grid; grid-template-columns: 30.5mm 1fr 30.5mm; align-items: center;
+              padding-bottom: 2.1mm; border-bottom: 0.25mm solid var(--rule); }
+  .logo-left { display: block; width: 30.5mm; height: 15.1mm; object-fit: contain; object-position: left center; }
+  .logo-right { display: block; width: 22mm; height: 7.9mm; object-fit: contain; justify-self: end; }
+  .college { text-align: center; }
+  .college .name { font-weight: 700; font-size: 11.5pt; line-height: 1.2; color: var(--navy); letter-spacing: -0.1pt; }
+  .college .aff { margin-top: 0.4mm; font-size: 7.6pt; line-height: 1.2; color: var(--muted); }
+  .college .dept { margin-top: 0.5mm; font-weight: 700; font-size: 8pt; line-height: 1.2; letter-spacing: 0.9pt; }
+
+  /* ---------- title banner ---------- */
+  .banner { flex: none; margin-top: 2.7mm; border-radius: 2.6mm; background: var(--navy); color: #fff;
+            text-align: center; padding: 2.7mm 6mm 2.6mm; }
+  .kicker { font-weight: 700; font-size: 7.5pt; line-height: 1.2; letter-spacing: 2.2pt; color: var(--banner-label); }
+  h1 { margin-top: 0.9mm; font-weight: 800; font-size: 20pt; line-height: 1.08; letter-spacing: -0.3pt;
+       text-wrap: balance; }
+  .subtitle { margin-top: 1.1mm; font-size: 9pt; line-height: 1.25; color: #E0E7FF; }
+  .accent { width: 15.9mm; height: 0.8mm; border-radius: 0.4mm; background: var(--orange); margin: 1.8mm auto 1.7mm; }
+  .people { font-size: 8.5pt; line-height: 1.3; }
+  .people + .people { margin-top: 0.4mm; }
+  .people .lbl { font-weight: 700; font-size: 7.5pt; letter-spacing: 1.2pt; color: var(--banner-label);
+                 margin-right: 1mm; }
+
+  /* ---------- two columns ---------- */
+  .columns { flex: 1 1 auto; min-height: 0; margin-top: 2.9mm; display: grid;
+             grid-template-columns: 89mm 1fr 96mm; }
+  .divider { justify-self: center; width: 0; border-left: 0.3mm dashed var(--sky); }
+  .col { min-height: 0; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+  section { flex: none; }
+  h2 { display: flex; align-items: center; gap: 1.6mm; margin-bottom: 1mm; color: var(--navy);
+       font-weight: 800; font-size: 11pt; line-height: 1.15; letter-spacing: 0.7pt; text-transform: uppercase; }
+  h2::before { content: ""; flex: none; width: 2.6mm; height: 2.6mm; border-radius: 0.45mm; background: var(--orange); }
+  h3 { font-weight: 700; font-size: 8.8pt; line-height: 1.25; margin: 1mm 0 0.2mm; }
+  h3:first-child { margin-top: 0; }
+  p.just { text-align: justify; }
+
+  ul.dots { list-style: none; }
+  ul.dots li { position: relative; padding-left: 3.4mm; }
+  ul.dots li + li { margin-top: 0.2mm; }
+  ul.dots li::before { content: ""; position: absolute; left: 0.5mm; top: calc(var(--lh) * 0.5em - 0.5mm);
+                       width: 1mm; height: 1mm; border-radius: 50%; background: var(--navy); }
+  ul.dots.warm li::before { background: var(--orange); }
+
+  /* module diagram */
+  .diagram { --g: 1.9mm; }
+  .diagram .root { width: 64mm; margin: 0 auto; border-radius: 1.3mm; background: var(--navy); color: #fff;
+                   text-align: center; font-weight: 700; font-size: 8.5pt; line-height: 1.2; padding: 1mm 2mm; }
+  .wires { position: relative; height: 4mm; }
+  .wires::before { content: ""; position: absolute; left: 50%; top: 0; height: 2.1mm; width: 0.3mm;
+                   transform: translateX(-50%); background: var(--navy); }
+  .wires::after { content: ""; position: absolute; top: 2.1mm; height: 0.3mm; background: var(--navy);
+                  left: calc((100% - 2 * var(--g)) / 6); right: calc((100% - 2 * var(--g)) / 6); }
+  .wires i { position: absolute; top: 2.1mm; bottom: 0; width: 0.3mm; background: var(--navy);
+             transform: translateX(-50%); }
+  .wires i:nth-child(1) { left: calc((100% - 2 * var(--g)) / 6); }
+  .wires i:nth-child(2) { left: 50%; }
+  .wires i:nth-child(3) { left: calc(100% - (100% - 2 * var(--g)) / 6); }
+  .mcols { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--g); align-items: start; }
+  .mcol { display: flex; flex-direction: column; gap: 1.2mm; }
+  .mhead { border-radius: 1.2mm; background: var(--sky); color: var(--navy); text-align: center; font-weight: 700;
+           font-size: 8pt; line-height: 1.2; letter-spacing: -0.1pt; padding: 1mm 0.6mm; white-space: nowrap; }
+  .mcol.warm .mhead { background: var(--peach); color: var(--orange-text); }
+  .mitem { border: 0.25mm solid var(--rule); border-radius: 1.2mm; background: #fff; text-align: center;
+           font-weight: 500; font-size: var(--fs-small); line-height: 1.2; letter-spacing: -0.1pt;
+           padding: 0.85mm 0.3mm; white-space: nowrap; }
+
+  /* numbered system modules */
+  ol.modules { list-style: none; display: flex; flex-direction: column; gap: 1.6mm; }
+  ol.modules li { display: flex; align-items: center; gap: 1.3mm; }
+  .num { flex: none; width: 4.3mm; height: 4.3mm; border-radius: 50%; background: var(--teal); color: #fff;
+         display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 7.5pt;
+         line-height: 1; }
+  ol.modules p { white-space: nowrap; }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--fs-table); line-height: 1.24; }
+  th { background: var(--navy); color: #fff; text-align: left; font-weight: 700; letter-spacing: 0.25pt;
+       padding: 0.8mm 1.2mm; }
+  td { padding: 0.8mm 1.2mm; vertical-align: top; border-bottom: 0.25mm solid var(--rule); }
+  tbody tr:nth-child(odd) td { background: var(--shade); }
+  td:first-child { font-weight: 600; }
+  .lit col:nth-child(1) { width: 22%; } .lit col:nth-child(2) { width: 39%; }
+  .stack col:nth-child(1) { width: 21.4%; } .stack col:nth-child(2) { width: 56.8%; }
+  .stack td { white-space: nowrap; }
+
+  /* results */
+  .results { display: grid; grid-template-columns: 1fr 56.6mm; gap: 2.4mm; align-items: start; }
+  .res col:nth-child(1) { width: 16.8mm; } .res col:nth-child(2) { width: 16.7mm; }
+  .res col:nth-child(3) { width: 10.6mm; }
+  .res th { white-space: nowrap; letter-spacing: 0; }
+  .legend { margin-top: 1.1mm; font-size: var(--fs-small); line-height: 1.3; color: var(--muted); }
+  .legend b { font-weight: 600; color: var(--ink); }
+  .res td:nth-child(3) { font-variant-numeric: tabular-nums; }
+  .marks { line-height: 0; }
+  svg.mk { width: 2.5mm; height: 2.5mm; margin-right: 0.35mm; vertical-align: -0.35mm; fill: none; stroke: currentColor;
+           stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+
+  /* advantages & disadvantages */
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; }
+
+  /* references */
+  ol.refs { columns: 2; column-gap: 3.2mm; padding-left: 3.6mm; font-size: var(--fs-small); line-height: 1.3; }
+  ol.refs li { break-inside: avoid; padding-left: 0.4mm; }
+  ol.refs li::marker { font-weight: 600; }
+  ol.refs .src { color: var(--navy); }
+
+  /* ---------- footer ---------- */
+  footer { flex: none; margin-top: 2.4mm; border-top: 0.3mm solid var(--navy); padding-top: 1.6mm; text-align: center;
+           color: var(--navy); font-weight: 700; font-size: 7.5pt; line-height: 1.2; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <img class="logo-left" src="assets/ghr_college_logo.png" alt="G H Raisoni College logo">
+    <div class="college">
+      <div class="name">G H Raisoni College of Engineering &amp; Management, Jalgaon</div>
+      <div class="aff">(An Autonomous Institute Affiliated to KBC North Maharashtra University, Jalgaon)</div>
+      <div class="dept">DEPARTMENT OF DATA SCIENCE</div>
+    </div>
+    <img class="logo-right" src="assets/raisoni_education_logo.png" alt="raisoni EDUCATION logo">
+  </header>
+
+  <section class="banner">
+    <div class="kicker">PROJECT REPORT</div>
+    <h1>Intelligent Decision Support System Using Generative AI and Machine Learning</h1>
+    <p class="subtitle">A Multi-Agent Platform that Turns Business Questions and Data into Verified, Explainable Decisions</p>
+    <div class="accent"></div>
+    <p class="people"><span class="lbl">GUIDED BY</span>Dr. Arjun Jadhaw</p>
+    <p class="people"><span class="lbl">GROUP MEMBERS</span>Raj Vishwas Patil · Bhavesh Vinod Patil · Chaitany Rajesh Naval · Varun Darshan Patil</p>
+  </section>
+
+  <main class="columns">
+    <div class="col" id="col-left">
+
+      <section>
+        <h2>Abstract</h2>
+        <p class="just">IDSS is a web application that turns a business question into a verified, explained decision. A user
+        uploads a dataset and asks a question in plain English. Generative AI agents understand the question; an AutoML
+        engine (scikit-learn, XGBoost, LightGBM, Optuna) trains and tunes models; a verifier checks the results; SHAP
+        and what-if analysis explain them; and an insight agent writes recommendations that use only computed numbers,
+        plus a PDF report. Built with Python, FastAPI, Streamlit and SQLite, it is inspired by the AutoML-Agent
+        framework (ICML 2025).</p>
+      </section>
+
+      <section>
+        <h2>Introduction</h2>
+        <h3>Background</h3>
+        <p class="just">Businesses collect data but have few data scientists. AutoML tools stop at a trained model,
+        and LLM assistants can invent numbers. Managers need answers they can check and act on.</p>
+        <h3>Problem Statement</h3>
+        <ul class="dots warm">
+          <li>Business users cannot build ML models on their own</li>
+          <li>Questions must be turned into ML tasks by hand</li>
+          <li>AutoML tools return a model, not a decision</li>
+          <li>LLM-written code can fail; LLMs can invent numbers</li>
+          <li>Results are rarely verified, explained or reported</li>
+        </ul>
+        <h3>Objectives</h3>
+        <ul class="dots">
+          <li>Turn a plain-English question into a validated ML task</li>
+          <li>Train and tune models automatically within a budget</li>
+          <li>Check every model against the goal and a baseline</li>
+          <li>Explain results with SHAP, what-if and risk tiers</li>
+          <li>Write insights from computed facts, plus a PDF report</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Module Diagram</h2>
+        <div class="diagram">
+          <div class="root">Intelligent Decision Support System</div>
+          <div class="wires"><i></i><i></i><i></i></div>
+          <div class="mcols">
+            <div class="mcol">
+              <div class="mhead">User Interface</div>
+              <div class="mitem">Streamlit Dashboard</div>
+              <div class="mitem">FastAPI Backend</div>
+              <div class="mitem">Reports &amp; History</div>
+            </div>
+            <div class="mcol">
+              <div class="mhead">GenAI Agents</div>
+              <div class="mitem">Requirement Agent</div>
+              <div class="mitem">Knowledge (RAG)</div>
+              <div class="mitem">Insight Agent</div>
+            </div>
+            <div class="mcol warm">
+              <div class="mhead">ML &amp; Decision Engine</div>
+              <div class="mitem">Data Profiling</div>
+              <div class="mitem">AutoML + Optuna</div>
+              <div class="mitem">Verifier</div>
+              <div class="mitem">SHAP + What-If</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>System Modules</h2>
+        <ol class="modules">
+          <li><span class="num">1</span><p><b>Requirement Agent —</b> turns the question into an ML task</p></li>
+          <li><span class="num">2</span><p><b>Data Agent —</b> loads, profiles, cleans and splits the data</p></li>
+          <li><span class="num">3</span><p><b>AutoML Engine —</b> trains and tunes models with Optuna</p></li>
+          <li><span class="num">4</span><p><b>Verifier —</b> rule-based checks; re-plans once on failure</p></li>
+          <li><span class="num">5</span><p><b>Decision Layer —</b> SHAP, what-if, counterfactuals, risk tiers</p></li>
+          <li><span class="num">6</span><p><b>Insight Agent &amp; Reports —</b> fact-checked brief, PDF report</p></li>
+        </ol>
+      </section>
+
+    </div>
+    <div class="divider"></div>
+    <div class="col" id="col-right">
+
+      <section>
+        <h2>Literature Review</h2>
+        <table class="lit">
+          <colgroup><col><col><col></colgroup>
+          <thead><tr><th>Work</th><th>Feature</th><th>Limitation</th></tr></thead>
+          <tbody>
+            <tr><td>AutoML-Agent</td><td>LLM agents plan, write and verify a full ML pipeline</td>
+                <td>Generated training code can fail; stops at the model</td></tr>
+            <tr><td>Auto-sklearn</td><td>Strong automatic model search on tabular data</td>
+                <td>Task is set up in code; output is only a model</td></tr>
+            <tr><td>BI dashboards</td><td>Interactive reports and charts (Power BI, Tableau)</td>
+                <td>Mostly descriptive; new questions need an analyst</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Technology Stack</h2>
+        <table class="stack">
+          <colgroup><col><col><col></colgroup>
+          <thead><tr><th>Category</th><th>Technology</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Frontend</td><td>Streamlit, Plotly</td><td>Dashboard</td></tr>
+            <tr><td>Backend</td><td>FastAPI, Uvicorn</td><td>REST API</td></tr>
+            <tr><td>ML</td><td>scikit-learn, XGBoost, LightGBM, Optuna</td><td>Train and tune</td></tr>
+            <tr><td>Explainability</td><td>SHAP</td><td>Key drivers</td></tr>
+            <tr><td>GenAI</td><td>OpenAI-compatible LLM API, TF-IDF RAG</td><td>Agents, RAG</td></tr>
+            <tr><td>Database</td><td>SQLite, SQLAlchemy</td><td>Run history</td></tr>
+            <tr><td>Reports</td><td>ReportLab</td><td>PDF report</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Results</h2>
+        <div class="results">
+          <div>
+            <ul class="dots" data-lines="2">
+              <li>Beats the baseline on <span data-fact="beats_baseline">5/5</span> datasets</li>
+              <li>SR <span data-fact="sr">1.00</span> · NPS <span data-fact="nps">0.800</span> · CS
+                  <span data-fact="cs">0.900</span></li>
+              <li>Threshold tuning lifts churn F1 <span data-fact="churn_f1_fixed">0.561</span> →
+                  <span data-fact="churn_f1">0.649</span></li>
+              <li><span data-fact="tests">449</span> tests, <span data-fact="coverage">93%</span> coverage</li>
+            </ul>
+            <p class="legend"><b>SR</b> success rate<br><b>NPS</b> normalised score<br><b>CS</b> overall score<br>
+            <b>Score</b> NPS, mean of <span data-fact="seeds">3</span> seeds</p>
+          </div>
+          <!-- table:results --><table class="res"><colgroup><col><col><col><col></colgroup><thead><tr><th>Dataset</th><th>Best model</th><th>Score</th><th>Verified</th></tr></thead><tbody><tr><td>Churn</td><td>Logistic regression</td><td data-fact="score:Churn">0.649</td><td class="marks" data-marks="3/3"><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg></td></tr><tr><td>Crop price</td><td>LightGBM</td><td data-fact="score:Crop price">0.939</td><td class="marks" data-marks="3/3"><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg></td></tr><tr><td>Store sales</td><td>Ridge</td><td data-fact="score:Store sales">0.941</td><td class="marks" data-marks="3/3"><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg></td></tr><tr><td>Delivery</td><td>Logistic regression</td><td data-fact="score:Delivery">0.656</td><td class="marks" data-marks="2/3"><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk bad" viewBox="0 0 10 10" role="img" aria-label="not verified"><path d="M2.7 2.7 7.3 7.3M7.3 2.7 2.7 7.3"/></svg></td></tr><tr><td>Segments</td><td>Gaussian mixture</td><td data-fact="score:Segments">0.816</td><td class="marks" data-marks="3/3"><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg><svg class="mk ok" viewBox="0 0 10 10" role="img" aria-label="verified"><path d="M2 5.4 4.2 7.5 8.1 2.7"/></svg></td></tr></tbody></table><!-- /table:results -->
+        </div>
+      </section>
+
+      <section>
+        <h2>Advantages &amp; Disadvantages</h2>
+        <div class="pros-cons">
+          <div>
+            <h3>Advantages</h3>
+            <ul class="dots">
+              <li>Questions in plain English</li>
+              <li>Every model is checked</li>
+              <li>Clear drivers and what-if</li>
+              <li>Runs offline without an LLM</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Disadvantages</h3>
+            <ul class="dots warm" data-lines="2">
+              <li>Free-text questions and full insights need an LLM API</li>
+              <li>Evaluated on synthetic data</li>
+              <li>Finds patterns, not causes</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Conclusion</h2>
+        <p class="just">IDSS pairs LLM agents, which understand the question and explain the answer, with tested code
+        that trains and verifies the models. From one plain-English question, a non-expert gets a verified model, its
+        key drivers, what-if answers and a clear PDF report.</p>
+      </section>
+
+      <section>
+        <h2>References</h2>
+        <ol class="refs">
+          <li>AutoML-Agent — <span class="src">ICML 2025</span></li>
+          <li>Scikit-learn — <span class="src">JMLR 2011</span></li>
+          <li>Optuna — <span class="src">KDD 2019</span></li>
+          <li>XGBoost — <span class="src">KDD 2016</span></li>
+          <li>LightGBM — <span class="src">NeurIPS 2017</span></li>
+          <li>SHAP — <span class="src">NeurIPS 2017</span></li>
+          <li>FastAPI — <span class="src">fastapi.tiangolo.com</span></li>
+          <li>Streamlit — <span class="src">docs.streamlit.io</span></li>
+        </ol>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>Department of Data Science · G H Raisoni College of Engineering &amp; Management, Jalgaon</footer>
+
+</div>
+</body>
+</html>

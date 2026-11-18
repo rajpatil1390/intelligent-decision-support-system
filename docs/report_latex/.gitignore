@@ -1,0 +1,13 @@
+# LaTeX build files (latexmk / pdflatex); the final PDF is saved as IDSS_Project_Report_LaTeX.pdf
+*.aux
+*.log
+*.toc
+*.lof
+*.lot
+*.loa
+*.lol
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+main.pdf

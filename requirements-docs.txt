@@ -1,0 +1,7 @@
+# Report, poster and presentation build dependencies (Steps 10B-12), separate from the runtime stack. Pinned for reproducibility.
+# Install: .venv\Scripts\python.exe -m pip install -r requirements-docs.txt
+
+python-docx==1.2.0  # scripts/build_report.py, scripts/build_weekly_reports.py
+pywin32==312  # Word / PowerPoint COM: update fields, export PDFs and slide PNGs (Windows + Office only)
+pymupdf==1.28.2  # render PDF pages to PNG for visual QA
+python-pptx==1.0.2  # scripts/build_ppt.py (Step 12 presentation)

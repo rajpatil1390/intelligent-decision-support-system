@@ -1,0 +1,10 @@
+# Ruff lint settings (ruff is pinned in requirements.txt). Run from the project root:
+#   .venv\Scripts\python.exe -m ruff check .
+target-version = "py312"
+line-length = 130
+extend-exclude = ["reference", "workspace"]
+
+[lint]
+# Ruff's defaults (syntax errors, undefined names, unused imports/variables, ...) plus warnings, commented-out
+# code (ERA) and needless constructs (PIE). Formatting and line length are not enforced.
+select = ["E4", "E7", "E9", "F", "W", "ERA", "PIE"]
