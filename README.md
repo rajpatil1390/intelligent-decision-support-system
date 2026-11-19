@@ -17,7 +17,7 @@ actionable decisions.**
 
 <sub>At submission: 449 tests, 447 offline passing (see <a href="docs/testing.md">docs/testing.md</a>).</sub>
 
-**Live demo:** `<https://intelligent-decision-support-system-mzyclep8x9nvsc3xryybek.streamlit.app/>` — hosted on Streamlit Community Cloud (embedded API, public demo mode; see
+**Live demo:** https://intelligent-decision-support-system-mzyclep8x9nvsc3xryybek.streamlit.app/ — hosted on Streamlit Community Cloud (embedded API, public demo mode; see
 [Deployment](#streamlit-community-cloud-free))
 
 <img src="docs/assets/demo.gif" alt="Demo: Home → Demo Mode → Run Monitor → Results → Decision Center what-if" width="900">
