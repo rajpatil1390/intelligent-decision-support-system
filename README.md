@@ -7,6 +7,7 @@
 **Describe a business problem in plain language, upload a table, and get back a verified ML model with explained,
 actionable decisions.**
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](<LIVE_LINK>)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -16,7 +17,8 @@ actionable decisions.**
 
 <sub>At submission: 449 tests, 447 offline passing (see <a href="docs/testing.md">docs/testing.md</a>).</sub>
 
-**Live demo:** `<STREAMLIT_APP_URL>` (Streamlit Community Cloud, public demo mode)
+**Live demo:** `<LIVE_LINK>` — hosted on Streamlit Community Cloud (embedded API, public demo mode; see
+[Deployment](#streamlit-community-cloud-free))
 
 <img src="docs/assets/demo.gif" alt="Demo: Home → Demo Mode → Run Monitor → Results → Decision Center what-if" width="900">
 
@@ -692,10 +694,16 @@ on `127.0.0.1`); there are no user accounts, so do not expose them to a network 
 
 ### Streamlit Community Cloud (free)
 
+**The live demo (`<LIVE_LINK>`) is hosted on Streamlit Community Cloud**, running IDSS in **embedded API mode** with
+**public demo mode** on (`IDSS_EMBEDDED_API=1`, `IDSS_PUBLIC_DEMO=1`): one process, fast budget only, Ask Your Data
+off, uploads up to 10 MB, and a "do not upload private data" banner on every page.
+
 Community Cloud runs **one** Streamlit app straight from a public GitHub repository. IDSS fits that with its
 **embedded API mode**: with `IDSS_EMBEDDED_API=1` the first page view starts the FastAPI backend on `127.0.0.1:8000`
 in a background thread of the same process (once per process; the page waits until `/health` answers, at most 60 s),
 and the UI then talks to it over HTTP exactly as it does locally. The backend is never reachable from outside.
+
+To host your own copy:
 
 1. Push the repository to GitHub (public).
 2. On [share.streamlit.io](https://share.streamlit.io) choose **Create app → Deploy a public app from GitHub**:
@@ -715,7 +723,8 @@ and the UI then talks to it over HTTP exactly as it does locally. The backend is
 4. Deploy. Community Cloud installs `requirements.txt` (the runtime packages only; test tools live in
    `requirements-dev.txt`) and `packages.txt` (`libgomp1`, the OpenMP runtime LightGBM needs). `.streamlit/config.toml`
    sets the theme but no server address or port, so the cloud can choose its own.
-5. Open the app, run **Demo Mode**, and replace `<STREAMLIT_APP_URL>` at the top of this README with the app's URL.
+5. Open the app, run **Demo Mode**, and replace `<LIVE_LINK>` in this README (the badge and the live-demo line at the
+   top, this section and the roadmap) with the app's URL.
 
 The disk is ephemeral: `workspace/` folders are created at startup, and a restart (or waking the app after it slept)
 clears all runs, which suits a public demo. Public demo mode keeps memory low (fast budget only, SHAP on at most 200
@@ -784,7 +793,7 @@ Full list: [docs/limitations_future_work.md](docs/limitations_future_work.md).
 
 ## Roadmap
 
-- [ ] Streamlit Community Cloud public demo (`<STREAMLIT_APP_URL>`)
+- [x] Public demo on Streamlit Community Cloud (`<LIVE_LINK>`)
 - [ ] Real-data case studies (public benchmark datasets, a partner organisation) and a user study
 - [ ] Benchmark the LLM path across providers: parsing accuracy, question usefulness, brief faithfulness, cost
 - [ ] Stronger AutoML: cross-validation for small data, ensembling, more time-series models, conformal intervals
