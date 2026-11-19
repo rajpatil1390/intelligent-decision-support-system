@@ -3,6 +3,9 @@
 import streamlit as st
 
 from ui import common, styles
+from ui import embedded_api
+
+embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 QUESTION_KEY = "new_question"
 EXAMPLES: dict[str, str] = {

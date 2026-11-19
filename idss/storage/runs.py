@@ -10,6 +10,19 @@ from configs.settings import get_settings
 _RUN_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
 
 
+def ensure_workspace() -> list[Path]:
+    """Create the workspace folders (runs, logs, uploads) if they are missing and return them.
+
+    Called at API startup: a fresh clone has only the committed .gitkeep folders, and a hosted app (Streamlit
+    Community Cloud) starts on an ephemeral disk.
+    """
+    settings = get_settings()
+    folders = [settings.workspace_dir, settings.runs_dir, settings.logs_dir, settings.uploads_dir]
+    for folder in folders:
+        folder.mkdir(parents=True, exist_ok=True)
+    return folders
+
+
 def new_run_id() -> str:
     """A sortable, unique run id such as '20261005-143012-a1b2c3'."""
     return f"{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}"

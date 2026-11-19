@@ -2,6 +2,8 @@
 # Any .env variant may hold secrets; only the documented template is tracked.
 .env*
 !.env.example
+# Streamlit secrets (local tests of the Community Cloud setup; on the cloud they live in the app's settings)
+.streamlit/secrets.toml
 __pycache__/
 *.db
 *.db-wal

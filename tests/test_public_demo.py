@@ -5,11 +5,13 @@ import os
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from api.main import PUBLIC_DEMO_MAX_UPLOAD_BYTES, create_app
+import idss.agents.manager as manager_module
+from api.main import PUBLIC_DEMO_MAX_EXPLAIN_ROWS, PUBLIC_DEMO_MAX_UPLOAD_BYTES, create_app
 from configs.settings import Settings, get_settings
 from idss.agents.manager import Orchestrator, RunState
 from idss.core.schemas import Check, VerificationReport
@@ -100,7 +102,15 @@ def test_public_demo_caps_uploads_at_10_mb(workspace: Path) -> None:
         upload(client, classification_df(50))  # small files are still accepted
 
 
-def test_public_demo_runs_fast_only_and_disables_ask(workspace: Path) -> None:
+def test_public_demo_runs_fast_only_and_disables_ask(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    explained_rows: list[Any] = []
+    real_explain_run = manager_module.explain_run
+
+    def recording_explain_run(*args: Any, **kwargs: Any) -> Any:
+        explained_rows.append(kwargs.get("max_rows"))
+        return real_explain_run(*args, **kwargs)
+
+    monkeypatch.setattr(manager_module, "explain_run", recording_explain_run)
     with demo_client() as client:
         dataset = upload(client, classification_df(300))
         body = {"dataset_id": dataset["id"], "question": QUESTION}
@@ -115,6 +125,7 @@ def test_public_demo_runs_fast_only_and_disables_ask(workspace: Path) -> None:
         assert "disabled in the public demo" in detail
         # The rest of the results still work.
         assert client.get(f"/runs/{run_id}/leaderboard").status_code == 200
+    assert explained_rows == [PUBLIC_DEMO_MAX_EXPLAIN_ROWS]  # smaller SHAP sample, to keep memory low
 
 
 # --------------------------------------------------------------------------- retention

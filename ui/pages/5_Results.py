@@ -7,6 +7,9 @@ import streamlit as st
 from ui import charts, common, styles
 from ui import components as ui
 from ui.api_client import ApiClientError
+from ui import embedded_api
+
+embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 
 def show_charts(charts: dict[str, str]) -> None:

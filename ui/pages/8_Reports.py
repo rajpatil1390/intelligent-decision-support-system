@@ -7,6 +7,9 @@ import streamlit as st
 from ui import common, styles
 from ui import components as ui
 from ui.api_client import ApiClientError
+from ui import embedded_api
+
+embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 _IMAGE = re.compile(r"!\[([^\]]*)\]\(charts/([A-Za-z0-9][A-Za-z0-9_-]*\.png)\)")
 _HEADING = re.compile(r"^(#{1,4}) ", flags=re.MULTILINE)
@@ -71,11 +74,16 @@ else:
 
 styles.section("All reports")
 frame = ui.runs_frame(with_reports)[["Run", "Question", "State", "Created"]]
-frame["PDF"] = [api.url(r["report_pdf_url"]) if r.get("report_pdf_url") else None for r in with_reports]
-frame["Markdown"] = [api.url(r["report_md_url"]) if r.get("report_md_url") else None for r in with_reports]
-st.dataframe(frame, hide_index=True, column_config={
-    "Question": st.column_config.TextColumn(width="large"),
-    "PDF": st.column_config.LinkColumn(display_text="Open PDF"),
-    "Markdown": st.column_config.LinkColumn(display_text="Open .md"),
-})
-st.caption("Pick a run above to preview its report; the links open the files straight from the backend.")
+if embedded_api.enabled():
+    # The built-in backend listens on the server's 127.0.0.1 only, so a visitor's browser cannot open links to it.
+    st.dataframe(frame, hide_index=True, column_config={"Question": st.column_config.TextColumn(width="large")})
+    st.caption("Pick a run above to preview its report and download it with the buttons.")
+else:
+    frame["PDF"] = [api.url(r["report_pdf_url"]) if r.get("report_pdf_url") else None for r in with_reports]
+    frame["Markdown"] = [api.url(r["report_md_url"]) if r.get("report_md_url") else None for r in with_reports]
+    st.dataframe(frame, hide_index=True, column_config={
+        "Question": st.column_config.TextColumn(width="large"),
+        "PDF": st.column_config.LinkColumn(display_text="Open PDF"),
+        "Markdown": st.column_config.LinkColumn(display_text="Open .md"),
+    })
+    st.caption("Pick a run above to preview its report; the links open the files straight from the backend.")

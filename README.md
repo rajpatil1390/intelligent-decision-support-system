@@ -10,13 +10,13 @@ actionable decisions.**
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Tests](https://img.shields.io/badge/tests-472%20passed-2EA44F)](#testing)
+[![Tests](https://img.shields.io/badge/tests-506%20passed-2EA44F)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-2EA44F)](#testing)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <sub>At submission: 449 tests, 447 offline passing (see <a href="docs/testing.md">docs/testing.md</a>).</sub>
 
-**Live demo:** `<HF_LINK>`
+**Live demo:** `<STREAMLIT_APP_URL>` (Streamlit Community Cloud, public demo mode)
 
 <img src="docs/assets/demo.gif" alt="Demo: Home → Demo Mode → Run Monitor → Results → Decision Center what-if" width="900">
 
@@ -543,7 +543,7 @@ Missing values hurt most (largest NPS drop 0.087, customer segments), while rand
 | Frontend | Streamlit, Plotly, requests | Fast data-app UI with interactive charts; talks only to the API |
 | Reports | reportlab, matplotlib | PDF reports and charts without external tools |
 | Logging | loguru | One configured logger for the library code |
-| Quality | pytest, pytest-cov, ruff, Playwright | Offline tests, coverage, linting, UI screenshots and the demo GIF |
+| Quality | pytest, pytest-cov, ruff, Playwright | Offline tests, coverage, linting, UI screenshots and the demo GIF (`requirements-dev.txt`) |
 
 ## Quick start
 
@@ -563,6 +563,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run_all.ps1
 
 `run_all.ps1` starts the API (`http://localhost:8000`, interactive docs at `/docs`) in a new window and the UI
 (`http://localhost:8501`) in the current one. To start them separately: `scripts\run_api.ps1` and `scripts\run_ui.ps1`.
+`requirements.txt` holds only what the app needs; for the tests and linting install `requirements-dev.txt` instead.
 
 ### Linux / macOS
 
@@ -578,8 +579,11 @@ cp .env.example .env                 # optional: set LLM_PROVIDER, LLM_MODEL, LL
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 
 # terminal 2 – UI on http://localhost:8501 (run from the project root so .streamlit/config.toml is used)
-python -m streamlit run ui/app.py
+python -m streamlit run ui/app.py --server.address localhost
 ```
+
+Or in one process, like the hosted demo: `IDSS_EMBEDDED_API=1 python -m streamlit run ui/app.py --server.address
+localhost` (the UI starts the API itself; see [Streamlit Community Cloud](#streamlit-community-cloud-free)).
 
 ### First run
 
@@ -602,8 +606,9 @@ variables, which take precedence.
 | `LLM_TIMEOUT` | `60` | Seconds before an LLM call is abandoned (retried at most 3 times) |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL` |
 | `TAVILY_API_KEY`, `SERPAPI_KEY` | empty | Optional web search for the knowledge agent; empty = local notes only |
-| `IDSS_PUBLIC_DEMO` | `0` | `1` for a shared, hosted demo (see below) |
+| `IDSS_PUBLIC_DEMO` | `0` | `1` for a shared, hosted demo (see below); in embedded mode also read from Streamlit secrets |
 | `IDSS_API_URL` | `http://localhost:8000` | Shell variable for the UI (not read from `.env`): where the API is |
+| `IDSS_EMBEDDED_API` | `0` | Shell variable or Streamlit secret for the UI (not read from `.env`): `1` = the UI starts the API itself on `127.0.0.1:8000`, in one process |
 
 ### Public demo mode
 
@@ -612,6 +617,7 @@ For a hosted instance that strangers can use, set `IDSS_PUBLIC_DEMO=1` for the A
 - **Ask Your Data is disabled** (it executes LLM-generated code on the server); the endpoint returns 403;
 - uploads are limited to **10 MB**;
 - runs use the **fast budget only**, including the re-plan after a failed verification;
+- SHAP explains at most **200 rows** (instead of 500), to keep memory low on a small cloud machine;
 - at API startup, **runs older than 24 hours are deleted**, together with uploads that no remaining run uses;
 - the UI shows a **“Public demo – do not upload private data”** banner on every page.
 
@@ -679,28 +685,42 @@ Run IDSS on your own machine as in [Quick start](#quick-start) (Windows, Linux o
 | Other ports (Linux/macOS) | `uvicorn … --port <api>`; `IDSS_API_URL=http://localhost:<api> python -m streamlit run ui/app.py --server.port <ui>` |
 | Offline only | Leave `LLM_MODEL` / `LLM_API_KEY` empty |
 | A shared machine | Set `IDSS_PUBLIC_DEMO=1` for the API |
+| One process (no separate API) | `$env:IDSS_EMBEDDED_API = "1"`, then `scripts\run_ui.ps1` — the UI starts the API itself |
 
-The servers bind to `localhost` on purpose; there are no user accounts, so do not expose them to a network as they are.
+The servers bind to `localhost` on purpose (`scripts\run_ui.ps1` passes `--server.address localhost`; the API listens
+on `127.0.0.1`); there are no user accounts, so do not expose them to a network as they are.
 
-### Hugging Face Spaces (free)
+### Streamlit Community Cloud (free)
 
-> **Placeholder — not set up yet.** The steps below are the plan for the `<HF_LINK>` demo; this repository does not
-> contain a Dockerfile yet.
+Community Cloud runs **one** Streamlit app straight from a public GitHub repository. IDSS fits that with its
+**embedded API mode**: with `IDSS_EMBEDDED_API=1` the first page view starts the FastAPI backend on `127.0.0.1:8000`
+in a background thread of the same process (once per process; the page waits until `/health` answers, at most 60 s),
+and the UI then talks to it over HTTP exactly as it does locally. The backend is never reachable from outside.
 
-1. Create a new Space on Hugging Face: SDK **Docker**, hardware **CPU basic (free)**, visibility public.
-2. Add a `Dockerfile` that installs `requirements.txt` and starts both servers — the API on `127.0.0.1:8000` and the
-   UI on `0.0.0.0:7860` (the port Spaces expose), e.g. with a small start script:
+1. Push the repository to GitHub (public).
+2. On [share.streamlit.io](https://share.streamlit.io) choose **Create app → Deploy a public app from GitHub**:
+   your repository and branch, main file path **`ui/app.py`**.
+3. Under **Advanced settings** pick **Python 3.12** and paste the secrets (TOML; quote the values):
 
-   ```bash
-   python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 &
-   python -m streamlit run ui/app.py --server.address 0.0.0.0 --server.port 7860 --server.headless true
+   ```toml
+   IDSS_EMBEDDED_API = "1"
+   IDSS_PUBLIC_DEMO = "1"
+   # Optional – without these the demo runs offline (task from the data profile, template insights):
+   # LLM_PROVIDER = "groq"
+   # LLM_MODEL = "<model name>"
+   # LLM_API_KEY = "<key>"
    ```
-3. In the Space **Settings → Variables and secrets**: set the variable `IDSS_PUBLIC_DEMO=1`; optionally add
-   `LLM_PROVIDER`, `LLM_MODEL` and `LLM_API_KEY` as **secrets** (without them the demo runs offline).
-4. Push this repository to the Space's Git remote and wait for the build.
-5. Open the Space, run **Demo Mode**, and replace `<HF_LINK>` at the top of this README with the Space URL.
 
-Free Spaces have no persistent storage: a restart clears all runs, which suits a public demo.
+   Streamlit also exports root-level secrets as environment variables, which is how the backend's settings see them.
+4. Deploy. Community Cloud installs `requirements.txt` (the runtime packages only; test tools live in
+   `requirements-dev.txt`) and `packages.txt` (`libgomp1`, the OpenMP runtime LightGBM needs). `.streamlit/config.toml`
+   sets the theme but no server address or port, so the cloud can choose its own.
+5. Open the app, run **Demo Mode**, and replace `<STREAMLIT_APP_URL>` at the top of this README with the app's URL.
+
+The disk is ephemeral: `workspace/` folders are created at startup, and a restart (or waking the app after it slept)
+clears all runs, which suits a public demo. Public demo mode keeps memory low (fast budget only, SHAP on at most 200
+rows). On the Reports page the per-run links are hidden in embedded mode — the built-in backend is not reachable from a
+visitor's browser — and the download buttons are used instead.
 
 ## Project structure
 
@@ -718,7 +738,7 @@ Free Spaces have no persistent storage: a restart clears all runs, which suits a
 │   ├── knowledge/       Offline TF-IDF retrieval over data/knowledge (+ optional web search)
 │   ├── execution/       Sandbox for LLM-written analysis code
 │   └── storage/         Run directories, SQLite database, repository, public-demo retention
-├── ui/                  Streamlit dashboard (8 pages), API client, charts, theme
+├── ui/                  Streamlit dashboard (8 pages), API client, charts, theme, embedded API mode
 ├── data/
 │   ├── samples/         Five synthetic sample datasets (scripts/make_samples.py)
 │   └── knowledge/       Best-practice notes indexed for retrieval-augmented planning
@@ -732,14 +752,15 @@ Free Spaces have no persistent storage: a restart clears all runs, which suits a
 ## Testing
 
 ```bash
+python -m pip install -r requirements-dev.txt                    # once: runtime + pytest, pytest-cov, ruff, Playwright
 python -m pytest -q                                              # offline suite (no network, no real LLM)
 python -m pytest -q --cov=idss --cov=api --cov=ui --cov=configs  # with coverage
 python -m pytest -m live                                         # real LLM smoke tests (needs .env; costs tokens)
 python -m ruff check .                                           # lint
 ```
 
-Latest run: **472 passed, 2 deselected** (live LLM tests), with
-**93% line coverage** (6,611 statements) over `idss`, `api`, `ui` and `configs`. At submission:
+Latest run: **506 passed, 2 deselected** (live LLM tests), with
+**93% line coverage** (6,758 statements) over `idss`, `api`, `ui` and `configs`. At submission:
 449 tests, 447 offline passing ([docs/testing.md](docs/testing.md)). Every LLM call is replaced by a fake client, web
 search is disabled and the workspace is redirected to a temporary folder, so the suite never touches the network or
 your data.
@@ -763,7 +784,7 @@ Full list: [docs/limitations_future_work.md](docs/limitations_future_work.md).
 
 ## Roadmap
 
-- [ ] Hugging Face Spaces public demo (`<HF_LINK>`)
+- [ ] Streamlit Community Cloud public demo (`<STREAMLIT_APP_URL>`)
 - [ ] Real-data case studies (public benchmark datasets, a partner organisation) and a user study
 - [ ] Benchmark the LLM path across providers: parsing accuracy, question usefulness, brief faithfulness, cost
 - [ ] Stronger AutoML: cross-validation for small data, ensembling, more time-series models, conformal intervals
@@ -831,7 +852,7 @@ issues, and let us check that IDSS finds the true drivers. Real-data case studie
 <summary><b>Can I host it for other people?</b></summary>
 
 For a public demo, yes — set `IDSS_PUBLIC_DEMO=1` (see [Public demo mode](#public-demo-mode) and
-[Hugging Face Spaces](#hugging-face-spaces-free)). For real multi-user use it still needs authentication and a job
+[Streamlit Community Cloud](#streamlit-community-cloud-free)). For real multi-user use it still needs authentication and a job
 queue (see [Limitations](#limitations)).
 </details>
 

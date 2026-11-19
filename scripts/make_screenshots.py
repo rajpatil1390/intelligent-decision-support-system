@@ -7,7 +7,7 @@ newest runs), ideally offline, e.g. in two terminals:
 
     $env:WORKSPACE_DIR = "<empty folder>"; $env:LLM_MODEL = " "; $env:LLM_API_KEY = " "
     .venv\\Scripts\\python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8000
-    .venv\\Scripts\\python.exe -m streamlit run ui\\app.py --server.port 8501 --server.headless true
+    .venv\\Scripts\\python.exe -m streamlit run ui\\app.py --server.port 8501 --server.address localhost --server.headless true
 
 then:  .venv\\Scripts\\python.exe scripts\\make_screenshots.py
        (--skip-runs re-captures 01 and 05-10 from the two runs a previous call made)

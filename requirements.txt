@@ -1,4 +1,5 @@
-# IDSS runtime + dev dependencies (Python 3.12). Pinned for reproducibility.
+# IDSS runtime dependencies (Python 3.12). Pinned for reproducibility.
+# This is all Streamlit Community Cloud installs; tests, lint and screenshots: requirements-dev.txt.
 
 # Config & validation
 pydantic==2.13.5
@@ -32,10 +33,3 @@ sqlalchemy==2.1.3
 loguru==0.7.3
 reportlab==5.0.1
 matplotlib==3.11.2
-
-# Testing and code quality (development)
-pytest==9.1.1
-httpx2==2.13.1  # FastAPI TestClient
-pytest-cov==7.1.0  # coverage: pytest --cov=idss --cov=api --cov=ui --cov=configs
-ruff==0.16.10  # lint: ruff check . (settings in ruff.toml)
-playwright==1.63.0  # UI screenshots: scripts/make_screenshots.py (then: python -m playwright install chromium)

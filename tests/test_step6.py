@@ -137,6 +137,20 @@ def test_explain_tree_model_uses_shap(clf_lgbm: Trained) -> None:
     assert explanation.output == "probability that target = 'yes'"
 
 
+def test_explainer_max_rows_caps_the_sample(clf_lgbm: Trained, ts: Trained, tmp_path: Path) -> None:
+    """The public demo explains fewer rows (memory); the default stays MAX_EXPLAIN_ROWS."""
+    assert len(ModelExplainer(clf_lgbm.model, clf_lgbm.df).raw) == SHAP_ROWS
+    capped = ModelExplainer(clf_lgbm.model, clf_lgbm.df, max_rows=40)
+    assert len(capped.raw) == len(capped.Xt) == 40
+    assert capped.global_explanation().n_samples == 40
+    assert len(ModelExplainer(ts.model, ts.df, max_rows=30).raw) == 30  # time series: the latest rows
+    explanation, explainer = explain_run(clf_lgbm.model, clf_lgbm.df, clf_lgbm.result, clf_lgbm.profile, tmp_path,
+                                         max_rows=25)
+    assert explanation.global_explanation.n_samples == 25 and explainer is not None and len(explainer.raw) == 25
+    with pytest.raises(ValueError, match="at least 1"):
+        ModelExplainer(clf_lgbm.model, clf_lgbm.df, max_rows=0)
+
+
 def test_explain_linear_model_uses_shap(clf_lr: Trained) -> None:
     explanation = explain_global(clf_lr.model, clf_lr.df)
     by_feature = {f.feature: f for f in explanation.features}

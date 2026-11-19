@@ -10,6 +10,9 @@ import streamlit as st
 from ui import common
 from ui import components as ui
 from ui.api_client import ApiClientError
+from ui import embedded_api
+
+embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 HISTORY_KEY = "ask_history"
 EXAMPLE_QUESTIONS = [

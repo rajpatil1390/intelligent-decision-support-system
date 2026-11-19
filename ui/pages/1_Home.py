@@ -7,6 +7,9 @@ import streamlit as st
 from ui import common
 from ui import components as ui
 from ui import styles
+from ui import embedded_api
+
+embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 RECENT_RUNS = 10
 # Primary metrics on a bounded, higher-is-better scale: only these are averaged on the KPI strip

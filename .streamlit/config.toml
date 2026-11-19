@@ -30,7 +30,8 @@ secondaryBackgroundColor = "#F1EFFF"
 borderColor = "#E6E4FA"
 
 [server]
-address = "localhost"  # this machine only, like the API (127.0.0.1)
+# No address/port here: Streamlit Community Cloud sets its own. Locally scripts\run_ui.ps1 binds the UI to localhost
+# (this machine only, like the API on 127.0.0.1) with --server.address.
 maxUploadSize = 50  # MB, the same limit as the backend
 
 [browser]

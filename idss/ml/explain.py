@@ -69,9 +69,14 @@ _BRANCH_PREFIXES = ("num__", "cat__", "date__", "extra__")
 class ModelExplainer:
     """SHAP (or permutation-importance) explanations for a TrainedModel, reported per ORIGINAL column."""
 
-    def __init__(self, model: TrainedModel, data: pd.DataFrame, *, seed: int = 42) -> None:
+    def __init__(self, model: TrainedModel, data: pd.DataFrame, *, seed: int = 42, max_rows: int | None = None) -> None:
+        """`max_rows` caps the explained sample (default MAX_EXPLAIN_ROWS; the public demo passes fewer rows)."""
+        max_rows = MAX_EXPLAIN_ROWS if max_rows is None else max_rows
+        if max_rows < 1:
+            raise ValueError(f"max_rows must be at least 1, got {max_rows}.")
         self.model = model
         self.seed = seed
+        self.max_rows = max_rows
         self.features = model.pipeline[:-1]
         self.estimator = model.pipeline[-1]
         self.family = model_zoo.task_family(model.task_type)
@@ -146,10 +151,10 @@ class ModelExplainer:
                 # Lags need consecutive rows: transform the recent history, then keep the last rows.
                 ts = self.model.pipeline.named_steps["ts_features"]
                 ordered = data.sort_values(ts.time_column, key=parse_datetimes, kind="stable")
-                recent = ordered.tail(MAX_EXPLAIN_ROWS + max([*ts.lags, *ts.windows]) + 1)
+                recent = ordered.tail(self.max_rows + max([*ts.lags, *ts.windows]) + 1)
                 Xt = np.asarray(self.features.transform(recent[columns]), dtype="float64")
-                return recent.iloc[-MAX_EXPLAIN_ROWS:].copy(), Xt[-MAX_EXPLAIN_ROWS:]
-            raw = data if len(data) <= MAX_EXPLAIN_ROWS else data.sample(MAX_EXPLAIN_ROWS, random_state=self.seed)
+                return recent.iloc[-self.max_rows:].copy(), Xt[-self.max_rows:]
+            raw = data if len(data) <= self.max_rows else data.sample(self.max_rows, random_state=self.seed)
             return raw.copy(), np.asarray(self.features.transform(raw[columns]), dtype="float64")
 
     def _make_explainer(self) -> tuple[str, Any]:
@@ -384,11 +389,12 @@ def forecast_future(model: TrainedModel, history: pd.DataFrame, horizon: int = F
 
 def explain_run(model: TrainedModel, data: pd.DataFrame, training: TrainingResult, profile: DatasetProfile,
                 run_dir: Path, *, background: pd.DataFrame | None = None, horizon: int = FORECAST_HORIZON,
-                seed: int = 42) -> tuple[ExplanationResult, ModelExplainer | None]:
+                seed: int = 42, max_rows: int | None = None) -> tuple[ExplanationResult, ModelExplainer | None]:
     """Everything the decision layer needs to explain a trained model, plus charts in run_dir/charts/.
 
     `data` is the full dataset (cluster profiles, forecast history); `background` (default: `data`) is
-    the sample the drivers are computed on — normally the training rows.
+    the sample the drivers are computed on — normally the training rows; at most `max_rows` (default
+    MAX_EXPLAIN_ROWS) of them are explained.
     """
     charts_dir = run_dir / "charts"
     charts_dir.mkdir(parents=True, exist_ok=True)
@@ -401,7 +407,7 @@ def explain_run(model: TrainedModel, data: pd.DataFrame, training: TrainingResul
         _save_chart(charts, "cluster_sizes", plot_cluster_sizes(clusters, charts_dir / "cluster_sizes.png"))
         return ExplanationResult(global_explanation=global_explanation, clusters=clusters, charts=charts), None
 
-    explainer = ModelExplainer(model, background if background is not None else data, seed=seed)
+    explainer = ModelExplainer(model, background if background is not None else data, seed=seed, max_rows=max_rows)
     global_explanation = explainer.global_explanation()
     _save_chart(charts, "feature_importance", plot_feature_importance(global_explanation, charts_dir / "feature_importance.png"))
     if explainer.method in ("shap_tree", "shap_linear"):

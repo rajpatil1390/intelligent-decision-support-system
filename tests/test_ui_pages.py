@@ -15,7 +15,7 @@ from streamlit.testing.v1 import AppTest
 
 from ui import api_client
 from ui.api_client import ApiClientError, BackendUnavailable
-from ui import components
+from ui import components, embedded_api
 
 APP = Path(__file__).resolve().parents[1] / "ui" / "app.py"
 PAGES = ["pages/1_Home.py", "pages/2_Upload_Data.py", "pages/3_New_Analysis.py", "pages/4_Run_Monitor.py",
@@ -577,6 +577,20 @@ def test_reports_page(use_client) -> None:
     frame = at.dataframe[0].value
     assert frame["PDF"].iloc[0].startswith("http://localhost:8000/runs/")
     assert "run-noresult" not in frame["Run"].tolist()
+
+
+def test_reports_page_embedded_mode_has_no_backend_links(use_client, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The built-in backend listens on the server's 127.0.0.1, which a visitor's browser cannot open: the table
+    drops its link columns and the download buttons (fetched server side) remain."""
+    fake = use_client()
+    monkeypatch.setenv(embedded_api.EMBEDDED_ENV, "1")
+    monkeypatch.setattr(embedded_api, "ensure_backend", lambda: None)  # the fake client stands in for the server
+    at = open_page("pages/8_Reports.py", run_id="run-done")
+    assert_ok(at)
+    assert fake.called("report_pdf") and fake.called("report_markdown")
+    frame = at.dataframe[0].value
+    assert "PDF" not in frame.columns and "Markdown" not in frame.columns
+    assert "download it with the buttons" in texts(at)
 
 
 # --------------------------------------------------------------------------- pure helpers

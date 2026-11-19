@@ -8,6 +8,7 @@ synthetic data and budgets of one or two Optuna trials.
 ## Running the tests
 
 ```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt                     # once: runtime + pytest, ruff, ...
 .venv\Scripts\python.exe -m pytest -q                                               # offline suite
 .venv\Scripts\python.exe -m pytest -q --cov=idss --cov=api --cov=ui --cov=configs   # with coverage
 .venv\Scripts\python.exe -m pytest --collect-only -q                                # list the tests
@@ -75,6 +76,7 @@ Measured with pytest-cov 7.1.0 (coverage 7.16.2) over `idss`, `api`, `ui` and `c
 | API + persistence | Every endpoint with FastAPI's TestClient: uploads (limits, types, sanitised names), run lifecycle, 409 busy / not_ready / run_in_progress, 404s, path checks for charts and reports; repository CRUD and the Orchestrator's mirroring |
 | UI | The HTTP client with mocked `requests`; every Streamlit page through `AppTest` with data, without data and with the backend down, plus the main interactions |
 | Step 8 evaluation | The trainer's ablation switches, the clustering baseline, the new sample generators, NPS / CS / improvement formulas and the data perturbations |
+| Embedded API (Streamlit Community Cloud) | `tests/test_embedded_api.py`: with `IDSS_EMBEDDED_API=1` the real API starts once on a free loopback port, answers `/health` and is reused by later calls (also after the resource cache is cleared and for concurrent first calls); flags from the environment or Streamlit secrets; port-in-use, startup-error and health-timeout failures; `ui/app.py` and every page call it first; no address/port in `.streamlit/config.toml`; runtime requirements without dev tools; workspace folders created at startup; the public demo's smaller SHAP sample |
 
 ## Evaluation beyond unit tests
 

@@ -1,4 +1,4 @@
-# Ruff lint settings (ruff is pinned in requirements.txt). Run from the project root:
+# Ruff lint settings (ruff is pinned in requirements-dev.txt). Run from the project root:
 #   .venv\Scripts\python.exe -m ruff check .
 target-version = "py312"
 line-length = 130

@@ -11,6 +11,9 @@ import streamlit as st
 from ui import common
 from ui import components as ui
 from ui import styles
+from ui import embedded_api
+
+embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 POLL_SECONDS = 2
 

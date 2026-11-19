@@ -25,9 +25,11 @@ python -m venv .venv
 Copy-Item .env.example .env
 ```
 
-Check the installation by running the test suite (about 5 minutes, no network access needed):
+Check the installation by running the test suite (about 5 minutes, no network access needed). The test tools are in
+`requirements-dev.txt` (`requirements.txt` holds only what the app needs to run):
 
 ```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .venv\Scripts\python.exe -m pytest -q
 ```
 

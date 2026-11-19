@@ -6,8 +6,11 @@
   datasets, runs and events for the list endpoints.
 - Every error is JSON {"error": <code>, "detail": <message>}. Responses never contain secrets or server paths.
 - Public demo (IDSS_PUBLIC_DEMO=1): Ask Your Data is off, uploads are capped at 10 MB, runs use the fast budget
-  only, and runs older than 24 h are deleted at startup; GET /health tells the UI so it can show a banner.
-Start locally with scripts/run_api.ps1; interactive docs at http://localhost:8000/docs.
+  only, SHAP explains at most 200 rows (less memory), and runs older than 24 h are deleted at startup; GET /health
+  tells the UI so it can show a banner.
+- Startup creates the workspace folders if they are missing (hosted disks are ephemeral).
+Start locally with scripts/run_api.ps1; interactive docs at http://localhost:8000/docs. In embedded mode
+(IDSS_EMBEDDED_API=1) the Streamlit UI starts this app itself (ui/embedded_api.py).
 """
 
 import re
@@ -60,7 +63,7 @@ from idss.ml.profiler import profile_dataset
 from idss.storage.db import init_db
 from idss.storage.repository import DatasetRecord, RunRecord, get_repository
 from idss.storage.retention import PROFILE_SUFFIX, purge_older_than
-from idss.storage.runs import run_dir
+from idss.storage.runs import ensure_workspace, run_dir
 
 logger = get_logger()
 
@@ -69,6 +72,7 @@ API_VERSION = "1.0.0"
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 PUBLIC_DEMO_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 PUBLIC_DEMO_RETENTION = timedelta(hours=24)  # older runs (and uploads no run needs) are deleted at startup
+PUBLIC_DEMO_MAX_EXPLAIN_ROWS = 200  # SHAP sample in the public demo (default 500), to keep memory low
 MULTIPART_OVERHEAD_BYTES = 64 * 1024  # form boundaries and headers around the file in a multipart body
 UPLOAD_CHUNK_BYTES = 1024 * 1024
 MAX_FILENAME_STEM = 80
@@ -224,7 +228,9 @@ def _report_file(ctx: RunContext, kind: str) -> Path:
 
 
 def _orchestrator(config: ApiConfig, llm: LLMClient | None) -> Orchestrator:
-    return Orchestrator(llm, budget=config.budget, fast_only=config.public_demo)
+    if config.public_demo:
+        return Orchestrator(llm, budget=config.budget, fast_only=True, max_explain_rows=PUBLIC_DEMO_MAX_EXPLAIN_ROWS)
+    return Orchestrator(llm, budget=config.budget)
 
 
 def _abort_interrupted_runs() -> None:
@@ -528,8 +534,8 @@ def create_app(*, llm_factory: Callable[[], LLMClient | None] | None = None, bud
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> Any:
+        ensure_workspace()  # runs/, logs/, uploads/ (a fresh clone or an ephemeral cloud disk may lack them)
         init_db()
-        get_settings().uploads_dir.mkdir(parents=True, exist_ok=True)
         if config.public_demo:
             purge_older_than(PUBLIC_DEMO_RETENTION)
         _abort_interrupted_runs()

@@ -70,7 +70,7 @@ def start_servers(workspace: Path, api_port: int, ui_port: int, log_dir: Path, s
     commands = {
         "api": [sys.executable, "-m", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--port", str(api_port)],
         "ui": [sys.executable, "-m", "streamlit", "run", str(Path("ui") / "app.py"), "--server.port", str(ui_port),
-               "--server.headless", "true"],
+               "--server.address", "localhost", "--server.headless", "true"],
     }
     for name, command in commands.items():
         log_path = log_dir / f"{name}.log"

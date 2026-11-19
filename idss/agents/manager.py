@@ -165,16 +165,20 @@ class Orchestrator:
         budget: TrainingBudget | None = None,
         repository: Repository | None = None,
         fast_only: bool = False,
+        max_explain_rows: int | None = None,
     ) -> None:
         """`budget_mode` overrides the Model Agent's fast/full choice; `budget` overrides the budget entirely.
         `repository` is where transitions are mirrored (default: the workspace database). `fast_only` (public
-        demo) never uses the full budget, not even for the re-plan after a failed verification."""
+        demo) never uses the full budget, not even for the re-plan after a failed verification.
+        `max_explain_rows` caps the SHAP sample in EXPLAIN (None = MAX_EXPLAIN_ROWS of idss.ml.explain; the public
+        demo passes a smaller one to save memory)."""
         self.run_dir_root = run_dir_root if run_dir_root is not None else get_settings().runs_dir
         self.repository = repository
         self.max_revisions = max_revisions
         self.budget_mode = budget_mode
         self.budget = budget
         self.fast_only = fast_only
+        self.max_explain_rows = max_explain_rows
         self.requirement_agent = RequirementAgent(llm_client)
         self.data_agent = DataAgent(llm_client, runs_dir=self.run_dir_root)
         self.knowledge_agent = KnowledgeAgent(llm_client)
@@ -453,7 +457,7 @@ class Orchestrator:
         model: TrainedModel = joblib.load(training.model_path)  # our own artifact from TRAIN
         data = load_dataset(ctx.data_path)
         explanation, explainer = explain_run(model, data, training, profile, run_dir(ctx.run_id, self.run_dir_root),
-                                             background=_training_rows(ctx))
+                                             background=_training_rows(ctx), max_rows=self.max_explain_rows)
         ctx.explanation = explanation
         ctx.recommendations = recommend(model, data, ctx.requirement, profile, training, explanation, explainer,
                                         ctx.verification)

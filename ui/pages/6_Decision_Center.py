@@ -8,6 +8,9 @@ import streamlit as st
 
 from ui import charts, common, styles
 from ui import components as ui
+from ui import embedded_api
+
+embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 INPUT_COLUMNS = 3
 
