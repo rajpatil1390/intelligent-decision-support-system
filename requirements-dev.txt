@@ -7,3 +7,4 @@ httpx2==2.13.1  # FastAPI TestClient
 pytest-cov==7.1.0  # coverage: pytest --cov=idss --cov=api --cov=ui --cov=configs
 ruff==0.16.10  # lint: ruff check . (settings in ruff.toml)
 playwright==1.63.0  # UI screenshots: scripts/make_screenshots.py (then: python -m playwright install chromium)
+imageio-ffmpeg==0.8.1  # bundled ffmpeg binary: editing the LinkedIn demo videos (marketing/, not committed)

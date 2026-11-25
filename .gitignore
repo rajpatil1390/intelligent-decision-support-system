@@ -26,6 +26,8 @@ docs/presentation/slides/
 # college report/slide templates and the one-page layout reference (inputs of the build scripts), not committed
 docs/format/
 playground/
+# LinkedIn marketing assets (videos, thumbnails, carousel) and the scripts that build them; local only
+marketing/
 # Office lock files (a document open in Word/PowerPoint)
 ~$*
 # Local tool and editor settings, not part of the project
