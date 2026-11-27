@@ -47,6 +47,17 @@ class Settings(BaseSettings):
     # runs older than 24 h deleted at API startup, and a "do not upload private data" banner in the UI.
     public_demo: bool = Field(default=False, validation_alias="IDSS_PUBLIC_DEMO")
 
+    # v1.1 hard limits for every analysis plan (idss/execution/plan_validator.py): a plan above any of them is
+    # rejected and replaced by the fallback plan, whatever the LLM proposed. Defaults = the "full" budget preset.
+    max_upload_mb: float = Field(default=50.0, gt=0)
+    public_demo_max_upload_mb: float = Field(default=10.0, gt=0)
+    plan_max_rows: int = Field(default=1_000_000, ge=1)
+    plan_max_candidates: int = Field(default=6, ge=1)
+    plan_max_trials_per_model: int = Field(default=40, ge=1)
+    plan_max_seconds_per_model: float = Field(default=180.0, gt=0)
+    plan_max_total_seconds: float = Field(default=1080.0, gt=0)
+    plan_max_train_minutes: float = Field(default=240.0, gt=0)
+
     @field_validator("public_demo", mode="before")
     @classmethod
     def _blank_is_false(cls, value: object) -> object:

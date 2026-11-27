@@ -116,12 +116,16 @@ class ModelConstraints(_Schema):
 
 
 class RankedCandidate(_Schema):
+    # Part of the Model Agent's LLM output: an unknown key is an error, never silently dropped (v1.1).
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
     name: str = Field(description="A model name from the allowed list.")
     reason: str = Field(default="", description="One sentence on why this model suits the problem.")
 
 
 class ModelPlan(_Schema):
-    """What the AutoML engine should train (produced by ModelAgent in the PLAN state)."""
+    """What the AutoML engine should train. In a run it is built only by idss.execution.plan_validator from a
+    validated AnalysisPlan (v1.1); `source` "fallback" = the proposed plan was rejected."""
 
     task_type: TaskType
     target: str | None
@@ -131,7 +135,8 @@ class ModelPlan(_Schema):
     budget: TrainingBudget
     constraints: ModelConstraints = Field(default_factory=ModelConstraints)
     notes: list[str] = Field(default_factory=list)
-    source: Literal["llm", "default"] = "default"
+    source: Literal["llm", "default", "fallback"] = "default"
+    time_column: str | None = Field(default=None, description="Time-series forecasting: the time index column.")
 
 
 class LeaderboardEntry(_Schema):
@@ -387,7 +392,10 @@ class RecommendationResult(_Schema):
 class GroundingCheck(_Schema):
     passed: bool
     attempts: int
-    unsupported_numbers: list[str] = Field(default_factory=list)
+    unsupported_numbers: list[str] = Field(
+        default_factory=list, description="Numbers typed outside placeholders, or not found in the facts."
+    )
+    unknown_keys: list[str] = Field(default_factory=list, description="Placeholders naming no registered fact.")
 
 
 class DecisionInsight(_Schema):
@@ -398,6 +406,9 @@ class DecisionInsight(_Schema):
     next_steps: list[str]
     generated_by: Literal["llm", "template"] = "template"
     grounding: GroundingCheck | None = None
+    placeholder_text: dict[str, Any] | None = Field(
+        default=None, description="The same fields with {{fact.key}} placeholders, before code filled in the numbers."
+    )
 
 
 class ColumnProfile(_Schema):

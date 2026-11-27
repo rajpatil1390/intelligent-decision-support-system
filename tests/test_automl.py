@@ -17,6 +17,7 @@ from optuna.samplers import RandomSampler
 from idss.agents.manager import Orchestrator, RunState
 from idss.agents.model_agent import ModelAgent, ModelChoice, parse_constraints
 from idss.agents.requirement_agent import RelevanceCheck, RequirementAgent, RequirementSummary, SufficiencyCheck
+from idss.core.plan_contract import PlanContractError
 from idss.core.schemas import (
     BUDGET_PRESETS,
     DatasetSpec,
@@ -307,12 +308,10 @@ def clf_profile() -> Any:
     return profile_dataset(classification_df(), target="target")
 
 
-def test_model_agent_keeps_only_zoo_names(clf_profile: Any) -> None:
+def test_model_agent_canonicalises_zoo_names(clf_profile: Any) -> None:
     llm = FakeLLM({ModelChoice: ModelChoice(budget_mode="full", candidates=[
         RankedCandidate(name="XGBoost", reason="strong on tabular data"),
-        RankedCandidate(name="svm", reason="not allowed"),
         RankedCandidate(name="Random Forest", reason="robust"),
-        RankedCandidate(name="xgboost", reason="duplicate"),
     ])})
     plan = ModelAgent(llm).plan(make_requirement("tabular_classification", "target"), clf_profile)
     names = [c.name for c in plan.candidates]
@@ -320,12 +319,21 @@ def test_model_agent_keeps_only_zoo_names(clf_profile: Any) -> None:
     assert names[:2] == ["xgboost", "random_forest"] and plan.candidates[0].reason == "strong on tabular data"
     assert sorted(names) == sorted(model_zoo.candidate_names("tabular_classification"))  # rest filled from defaults
     assert plan.source == "llm" and plan.budget_mode == "full" and plan.budget == BUDGET_PRESETS["full"]
-    assert any("'svm' is not in the model zoo" in note for note in plan.notes)
     model_selection_prompt = llm.calls[0][1][1]["content"]
     assert "- lightgbm:" in model_selection_prompt and "x1 | numeric" in model_selection_prompt
 
 
-@pytest.mark.parametrize("llm", [None, FakeLLM({}), FakeLLM({ModelChoice: ModelChoice(candidates=[RankedCandidate(name="svm")])})])
+def test_model_agent_rejects_unknown_and_repeated_names(clf_profile: Any) -> None:
+    """v1.1: an unknown or repeated model name rejects the proposal instead of being dropped."""
+    llm = FakeLLM({ModelChoice: ModelChoice(candidates=[
+        RankedCandidate(name="XGBoost"), RankedCandidate(name="svm"), RankedCandidate(name="xgboost"),
+    ])})
+    with pytest.raises(PlanContractError) as caught:
+        ModelAgent(llm).plan(make_requirement("tabular_classification", "target"), clf_profile)
+    assert "Model 'svm' is not in the model zoo." in caught.value.reasons
+
+
+@pytest.mark.parametrize("llm", [None, FakeLLM({})])
 def test_model_agent_falls_back_to_default_ranking(clf_profile: Any, llm: Any) -> None:
     plan = ModelAgent(llm).plan(make_requirement("tabular_classification", "target"), clf_profile)
     assert plan.source == "default" and plan.budget_mode == "fast"

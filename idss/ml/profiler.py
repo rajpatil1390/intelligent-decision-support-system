@@ -10,7 +10,9 @@ import numpy as np
 import pandas as pd
 
 from idss.core.logger import get_logger
+from idss.core.sanitize import MAX_SCAN_VALUES, injection_warnings
 from idss.core.schemas import ColumnProfile, DatasetProfile, SemanticType, TaskType
+from idss.ml.data_loader import load_warnings
 
 logger = get_logger()
 
@@ -56,7 +58,9 @@ def profile_dataset(df: pd.DataFrame, target: str | None = None, *, suggest_targ
         target = _suggest_target(columns)
     task_type = _infer_task_type(columns, target, time_column) if target else "tabular_clustering"
 
-    issues = _column_warnings(columns)
+    issues = [*load_warnings(df), *_injection_warnings(df), *_column_warnings(columns)]
+    if all(col.n_unique <= 1 for col in columns):
+        issues.append("No column varies: every column has a single value (or none), so there is nothing to learn.")
     duplicate_rows = int(df.duplicated().sum())
     if duplicate_rows:
         issues.append(f"{duplicate_rows:,} duplicate rows found; they will be removed.")
@@ -237,8 +241,8 @@ def _suggest_target(columns: list[ColumnProfile]) -> str | None:
 
 def _infer_task_type(columns: list[ColumnProfile], target: str, time_column: str | None) -> TaskType | None:
     col = next((c for c in columns if c.name == target), None)
-    if col is None:
-        return None
+    if col is None or col.n_unique < 2:
+        return None  # absent, all missing or a single value: nothing to predict
     if col.semantic_type in ("categorical", "boolean"):
         is_classification = True
     elif col.semantic_type == "numeric":
@@ -271,6 +275,20 @@ def _time_index_column(df: pd.DataFrame, columns: list[ColumnProfile]) -> str | 
 # --------------------------------------------------------------------------- warnings
 
 
+def _injection_warnings(df: pd.DataFrame) -> list[str]:
+    """Headers and text values that look like instructions to an LLM (v1.1): flagged, then handled as data only."""
+    issues: list[str] = []
+    for name in df.columns:
+        series = df[name]
+        values: list[str] = []
+        if not (pd.api.types.is_numeric_dtype(series) or pd.api.types.is_datetime64_any_dtype(series)
+                or pd.api.types.is_bool_dtype(series)):
+            distinct = series.dropna().drop_duplicates().head(MAX_SCAN_VALUES)
+            values = [value for value in distinct.astype(str).tolist() if value]
+        issues += injection_warnings(str(name), values)
+    return issues
+
+
 def _column_warnings(columns: list[ColumnProfile]) -> list[str]:
     issues: list[str] = []
     for col in columns:
@@ -288,6 +306,10 @@ def _column_warnings(columns: list[ColumnProfile]) -> list[str]:
 
 def _target_warnings(df: pd.DataFrame, target: ColumnProfile, task_type: TaskType | None) -> list[str]:
     issues: list[str] = []
+    if target.n_unique == 0:
+        return [f"Target '{target.name}' has no values (every row is missing); it cannot be predicted."]
+    if target.n_unique == 1:
+        return [f"Target '{target.name}' has a single value ({target.sample_values[0]!r}); there is nothing to predict."]
     if target.missing_pct > 0:
         issues.append(f"Target '{target.name}' is {target.missing_pct:g}% missing; those rows will be dropped.")
     if task_type is None:

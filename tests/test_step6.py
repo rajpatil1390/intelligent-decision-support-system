@@ -26,6 +26,7 @@ from idss.agents.manager import Orchestrator, RunContext, RunState
 from idss.agents.model_agent import ModelAgent
 from idss.agents.requirement_agent import RelevanceCheck, RequirementAgent
 from idss.agents.verifier import Verifier
+from idss.decision.facts import FactsRegistry
 from idss.core.schemas import (
     DatasetProfile,
     FilterCondition,
@@ -110,7 +111,7 @@ def clu(tmp_path_factory: pytest.TempPathFactory) -> Trained:
 
 
 @pytest.fixture(scope="module")
-def clf_facts(clf_lr: Trained, tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+def clf_facts(clf_lr: Trained, tmp_path_factory: pytest.TempPathFactory) -> FactsRegistry:
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(explain_module, "MAX_EXPLAIN_ROWS", SHAP_ROWS)
         explanation, explainer = explain_run(clf_lr.model, clf_lr.df, clf_lr.result, clf_lr.profile,
@@ -348,51 +349,55 @@ def test_regression_levers_have_evidence(reg: Trained, tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- insight agent
 
 
-def grounded_draft(facts: dict[str, Any], extra: str = "") -> InsightDraft:
-    f1 = facts["model"]["test_metrics"]["f1"]
-    high = next(t for t in facts["risk_tiers"] if t["name"] == "High")
+def grounded_draft(extra: str = "") -> InsightDraft:
+    """A draft that writes every number as a registry placeholder (v1.1)."""
     return InsightDraft(
-        executive_summary=f"The model reaches an F1 score of {f1:.2f} on held-out data. {extra}".strip(),
-        key_findings=[f"{high['count']} records are high risk.", f"That is about {high['share']:.0%} of all records.",
-                      "x1 is the strongest driver."],
+        executive_summary=f"The model reaches an F1 score of {{{{metrics.test.f1}}}} on held-out data. {extra}".strip(),
+        key_findings=["{{risk_tiers.high.count}} records are high risk.",
+                      "That is about {{risk_tiers.high.share}} of all records.", "x1 is the strongest driver."],
         recommended_actions=["Contact the high-risk group first."],
         risks_and_limitations=["The model shows associations, not causes."],
         next_steps=["Run a small pilot with a comparison group."],
     )
 
 
-def test_grounded_llm_insight_is_accepted(clf_facts: dict[str, Any]) -> None:
-    llm = FakeLLM({InsightDraft: grounded_draft(clf_facts)})
+def test_grounded_llm_insight_is_accepted(clf_facts: FactsRegistry) -> None:
+    llm = FakeLLM({InsightDraft: grounded_draft()})
     insight = InsightAgent(llm).generate(clf_facts)
     assert insight.generated_by == "llm" and insight.grounding.passed and insight.grounding.attempts == 1
     assert "JSON" in llm.calls[0][1][0]["content"] and "never invent" in llm.calls[0][1][0]["content"].lower()
+    assert clf_facts.fact("metrics.test.f1").display in insight.executive_summary  # filled in by code
+    assert insight.placeholder_text["key_findings"][0] == "{{risk_tiers.high.count}} records are high risk."
 
 
-def test_invented_number_triggers_one_regeneration_then_template(clf_facts: dict[str, Any]) -> None:
-    invented = grounded_draft(clf_facts, "Churn will fall by 37.5% next quarter.")
+def test_invented_number_triggers_one_regeneration_then_template(clf_facts: FactsRegistry) -> None:
+    invented = grounded_draft("Churn will fall by 37.5% next quarter.")
     llm = FakeLLM({InsightDraft: [invented, invented]})
     insight = InsightAgent(llm).generate(clf_facts)
 
     assert insight.generated_by == "template" and llm.count("InsightDraft") == 2
     assert not insight.grounding.passed and insight.grounding.attempts == 2 and "37.5%" in insight.grounding.unsupported_numbers
     retry_prompt = llm.calls[1][1][1]["content"]
-    assert "not in the facts" in retry_prompt and "37.5%" in retry_prompt
+    assert "typed numbers instead of placeholders" in retry_prompt and "37.5%" in retry_prompt
 
 
-def test_regeneration_can_fix_the_draft(clf_facts: dict[str, Any]) -> None:
-    llm = FakeLLM({InsightDraft: [grounded_draft(clf_facts, "Revenue rises by 12.34%."), grounded_draft(clf_facts)]})
+def test_regeneration_can_fix_the_draft(clf_facts: FactsRegistry) -> None:
+    llm = FakeLLM({InsightDraft: [grounded_draft("Revenue rises by 12.34%."), grounded_draft()]})
     insight = InsightAgent(llm).generate(clf_facts)
     assert insight.generated_by == "llm" and insight.grounding.passed and insight.grounding.attempts == 2
 
 
-def test_template_insight_is_complete_and_grounded(clf_facts: dict[str, Any]) -> None:
+def test_template_insight_is_complete_and_grounded(clf_facts: FactsRegistry) -> None:
     insight = template_insight(clf_facts)
     assert insight.generated_by == "template" and insight.executive_summary
     assert 3 <= len(insight.key_findings) <= 5
     assert insight.recommended_actions and insight.risks_and_limitations and insight.next_steps
     text = " ".join([insight.executive_summary, *insight.key_findings, *insight.recommended_actions,
                      *insight.risks_and_limitations, *insight.next_steps])
-    assert unsupported_numbers(text, fact_numbers(clf_facts)) == []  # the template never invents numbers either
+    assert unsupported_numbers(text, clf_facts.numbers()) == []  # the template never invents numbers either
+    templates = insight.placeholder_text
+    assert clf_facts.raw_numbers(" ".join([templates["executive_summary"], *templates["key_findings"],
+                                           *templates["recommended_actions"], *templates["risks_and_limitations"]])) == []
     assert InsightAgent(None).generate(clf_facts).generated_by == "template"
 
 

@@ -2,7 +2,9 @@
 
 Each file has a `## system` and a `## user` section. Placeholders use `$name` syntax
 (string.Template), so JSON braces in prompts need no escaping; write a literal dollar as `$$`.
-Dataset context must come from format_profile(): aggregates only, never raw rows.
+Dataset context must come from format_profile(): aggregates only, never raw rows. Since v1.1 every
+dataset-derived string is cleaned (idss.core.sanitize) and sent inside a <data> block, and every template's
+system section states DATA_RULE.
 """
 
 import re
@@ -11,9 +13,11 @@ from pathlib import Path
 from string import Template
 from typing import NamedTuple
 
-from idss.core.schemas import DatasetProfile
+from idss.core.sanitize import MAX_TEXT_CHARS, clean, data_block, data_json
+from idss.core.schemas import DatasetProfile, UserRequirement
 
 PROMPTS_DIR = Path(__file__).resolve().parent
+MAX_PROMPT_COLUMNS = 200  # wider datasets are summarised, so a 1,000-column file cannot flood a prompt
 PROMPT_NAMES = (
     "relevance_check",
     "requirement_parse",
@@ -58,26 +62,46 @@ def render_prompt(name: str, **variables: str) -> list[dict[str, str]]:
 
 
 def format_columns(profile: DatasetProfile | None) -> str:
-    """Column names and semantic types only — the minimum needed to write code against the data."""
+    """Column names and semantic types only — the minimum needed to write code against the data (in <data>)."""
     if profile is None:
         return "No dataset profile is available."
-    return "\n".join(f"- {col.name} ({col.semantic_type}, pandas dtype {col.dtype})" for col in profile.columns)
+    lines = [f"- {clean(col.name)} ({col.semantic_type}, pandas dtype {clean(col.dtype, 40)})"
+             for col in profile.columns[:MAX_PROMPT_COLUMNS]]
+    return data_block("\n".join(lines + _more_columns(profile)))
 
 
 def format_profile(profile: DatasetProfile | None) -> str:
-    """Describe a dataset for an LLM using names, types and aggregate statistics only (no values or rows)."""
+    """Describe a dataset for an LLM using names, types and aggregate statistics only (no values or rows).
+
+    Every name and warning is cleaned, and the whole description is one <data> block."""
     if profile is None:
         return "No dataset has been provided."
+    target = clean(profile.suggested_target) if profile.suggested_target else "none"
     lines = [
         f"Rows: {profile.n_rows:,}. Columns: {profile.n_cols}.",
         "Columns (name | type | % missing | distinct values):",
-        *(f"- {col.name} | {col.semantic_type} | {col.missing_pct:g}% | {col.n_unique}" for col in profile.columns),
-        f"Suggested target column: {profile.suggested_target or 'none'}.",
+        *(f"- {clean(col.name)} | {col.semantic_type} | {col.missing_pct:g}% | {col.n_unique}"
+          for col in profile.columns[:MAX_PROMPT_COLUMNS]),
+        *_more_columns(profile),
+        f"Suggested target column: {target}.",
         f"Suggested task type: {profile.suggested_task_type or 'none'}.",
     ]
     if profile.time_column:
-        lines.append(f"Time column: {profile.time_column}.")
+        lines.append(f"Time column: {clean(profile.time_column)}.")
     if profile.warnings:
         lines.append("Data-quality warnings:")
-        lines += [f"- {warning}" for warning in profile.warnings]
-    return "\n".join(lines)
+        lines += [f"- {clean(warning, MAX_TEXT_CHARS)}" for warning in profile.warnings]
+    return data_block("\n".join(lines))
+
+
+def format_requirement(requirement: UserRequirement) -> str:
+    """The requirement as JSON inside a <data> block, without internal notes or server file paths."""
+    dumped = requirement.model_dump(mode="json", exclude={"system_notes"})
+    for dataset in dumped.get("datasets", []):
+        dataset.pop("path", None)
+    return data_json(dumped)
+
+
+def _more_columns(profile: DatasetProfile) -> list[str]:
+    hidden = len(profile.columns) - MAX_PROMPT_COLUMNS
+    return [f"- ... and {hidden:,} more columns (not listed)"] if hidden > 0 else []

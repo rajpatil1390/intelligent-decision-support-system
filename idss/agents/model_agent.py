@@ -1,36 +1,45 @@
-"""Model Agent: decide which zoo models to train, which metric to optimise and how much to search.
+"""Model Agent: propose which zoo models to train, which metric to optimise and how much to search.
 
-The LLM only ranks names from the model zoo (with reasons) and suggests a budget mode; it never writes
-code. Unknown names are dropped, models the user asked for go first, and if the LLM fails or picks
-nothing usable a deterministic ranking is used. User constraints such as "inference < 5 ms" or
-"training < 30 min" are parsed without the LLM and applied to the budget and to model selection.
+The LLM only ranks names from the model zoo (with reasons) and suggests a metric and a budget mode; it never
+writes code. Since v1.1 the agent no longer cleans up the LLM's answer: its output is a PlanProposal whose payload
+must pass the plan contract (idss.core.plan_contract) and the independent validator
+(idss.execution.plan_validator). An unknown or duplicated model name, a metric that does not fit the task or an
+unknown key therefore rejects the proposal (the validator then uses a fallback plan) instead of being dropped.
+Models the user asked for go first and the default ranking fills the list. User constraints such as
+"inference < 5 ms" or "training < 30 min" are parsed without the LLM.
 """
 
 import re
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from idss.agents.requirement_agent import TASK_METRICS
-from idss.core.llm_client import LLMClient
+from idss.core.llm_client import LLMClient, LLMValidationError
 from idss.core.logger import get_logger
-from idss.core.prompts import format_profile, render_prompt
+from idss.core.plan_contract import MAX_CANDIDATES, PlanContractError, PlanProposal, parse_plan
+from idss.core.prompts import format_profile, format_requirement, render_prompt
+from idss.core.sanitize import data_lines
 from idss.core.schemas import (
-    BUDGET_PRESETS,
     BudgetMode,
     DatasetProfile,
     KnowledgeBrief,
     ModelConstraints,
     ModelPlan,
     RankedCandidate,
-    TrainingBudget,
     UserRequirement,
+)
+from idss.execution.plan_validator import (  # noqa: F401  (budget_for / TRAIN_TIME_HEADROOM re-exported)
+    TRAIN_TIME_HEADROOM,
+    budget_for,
+    build_model_plan,
+    default_time_column,
 )
 from idss.ml import model_zoo
 from idss.ml.evaluator import is_supported, normalize_metric_name
 
 logger = get_logger()
 
-TRAIN_TIME_HEADROOM = 0.8  # share of a training-time limit given to the search; the rest covers the final refit
 _DURATION = r"(\d+(?:\.\d+)?)\s*(ms|milliseconds?|s|secs?|seconds?|mins?|minutes?|h|hrs?|hours?)\b"
 _INFERENCE_LIMIT = re.compile(r"(?:inference|predict\w*|latency|response\w*|scoring)\D{0,40}?" + _DURATION, re.IGNORECASE)
 _TRAINING_LIMIT = re.compile(r"(?:train\w*|fit\w*|build\w*)\D{0,40}?" + _DURATION, re.IGNORECASE)
@@ -38,7 +47,9 @@ _EXPLAINABLE = re.compile(r"explain|interpret|transparen|understand", re.IGNOREC
 
 
 class ModelChoice(BaseModel):
-    """What the LLM returns."""
+    """What the LLM returns. Unknown keys are an error (the LLM client asks the model to correct them)."""
+
+    model_config = ConfigDict(extra="forbid")
 
     candidates: list[RankedCandidate] = Field(default_factory=list)
     primary_metric: str | None = None
@@ -46,10 +57,50 @@ class ModelChoice(BaseModel):
 
 
 class ModelAgent:
-    """Builds the ModelPlan for a run. Never raises because of the LLM."""
+    """Builds the plan proposal for a run. Never raises because of the LLM."""
 
     def __init__(self, llm_client: LLMClient | None) -> None:
         self.llm_client = llm_client
+
+    def propose(
+        self,
+        requirement: UserRequirement,
+        profile: DatasetProfile | None,
+        *,
+        budget_mode: BudgetMode | None = None,
+        knowledge: KnowledgeBrief | None = None,
+        feedback: list[str] | None = None,
+    ) -> PlanProposal:
+        """Assemble an (unvalidated) AnalysisPlan payload from the requirement and the LLM's model choice.
+
+        `budget_mode` overrides the LLM's fast/full suggestion. `knowledge` (retrieved best practices) and
+        `feedback` (verifier recommendations from a previous attempt) are shown to the LLM.
+        """
+        task = requirement.problem.task_type
+        notes: list[str] = []
+        if feedback:
+            notes.append("Re-planned using the verifier's recommendations.")
+        choice, rejection = self._ask_llm(requirement, profile, knowledge, feedback or [])
+        if rejection is not None:
+            return PlanProposal(source="llm", notes=notes, errors=[rejection])
+
+        names, reasons, source = self._rank(choice, requirement, notes)
+        labels_available = _labels_available(requirement, profile)
+        if choice is not None and choice.primary_metric:
+            metric = normalize_metric_name(choice.primary_metric)  # checked by the contract, not repaired here
+        else:
+            metric = choose_primary_metric(requirement, None, labels_available, notes)
+        payload: dict[str, Any] = {
+            "task_type": task,
+            "target": requirement.target,
+            "primary_metric": metric,
+            "candidate_models": names,
+            "budget_mode": budget_mode or (choice.budget_mode if choice else "fast"),
+            "constraints": parse_constraint_values(requirement.problem.constraints),
+            "actionable_features": list(requirement.actionable_features),
+            "time_column": default_time_column(profile) if task == "time_series_forecasting" and profile else None,
+        }
+        return PlanProposal(payload=payload, source=source, reasons=reasons, notes=notes)
 
     def plan(
         self,
@@ -60,36 +111,19 @@ class ModelAgent:
         knowledge: KnowledgeBrief | None = None,
         feedback: list[str] | None = None,
     ) -> ModelPlan:
-        """Plan the model search. `knowledge` (retrieved best practices) and `feedback` (verifier
-        recommendations from a previous attempt) are shown to the LLM when it ranks the models."""
-        task = requirement.problem.task_type
-        notes: list[str] = []
-        constraints = parse_constraints(requirement.problem.constraints)
-        if feedback:
-            notes.append("Re-planned using the verifier's recommendations.")
-        choice = self._ask_llm(requirement, profile, knowledge, feedback or [])
+        """Contract-checked ModelPlan for scripts and tests that call the trainer directly.
 
-        candidates, source = self._rank(choice, requirement, notes)
-        mode: BudgetMode = budget_mode or (choice.budget_mode if choice else "fast")
-        budget = budget_for(mode, constraints, notes)
-        candidates = _ensure_interpretable(candidates, constraints, budget.max_candidates, task, notes)
-
-        labels_available = _labels_available(requirement, profile)
-        primary = choose_primary_metric(requirement, choice.primary_metric if choice else None, labels_available, notes)
-        target = requirement.target if task != "tabular_clustering" or labels_available else None
-        for note in notes:
+        The Orchestrator never uses this: every run plan goes through plan_validator.validate_plan, which also
+        checks the plan against the data. Raises PlanContractError if the proposal breaks the contract.
+        """
+        proposal = self.propose(requirement, profile, budget_mode=budget_mode, knowledge=knowledge, feedback=feedback)
+        if proposal.errors:
+            raise PlanContractError(proposal.errors)
+        plan = build_model_plan(parse_plan(proposal.payload), source=proposal.source, reasons=proposal.reasons,
+                                notes=proposal.notes)
+        for note in plan.notes:
             logger.info("Model plan: {}", note)
-        return ModelPlan(
-            task_type=task,
-            target=target,
-            candidates=candidates,
-            primary_metric=primary,
-            budget_mode=mode,
-            budget=budget,
-            constraints=constraints,
-            notes=notes,
-            source=source,
-        )
+        return plan
 
     def _ask_llm(
         self,
@@ -97,56 +131,62 @@ class ModelAgent:
         profile: DatasetProfile | None,
         knowledge: KnowledgeBrief | None,
         feedback: list[str],
-    ) -> ModelChoice | None:
+    ) -> tuple[ModelChoice | None, str | None]:
+        """(choice, None) on success; (None, reason) if the LLM's output was invalid; (None, None) if unavailable."""
         if self.llm_client is None:
-            return None
+            return None, None
         task = requirement.problem.task_type
         allowed = "\n".join(f"- {c.name}: {c.description}" for c in model_zoo.candidates_for(task))
         try:
             messages = render_prompt(
                 "model_selection",
-                requirement_json=requirement.model_dump_json(exclude={"system_notes"}, indent=2),
+                requirement_json=format_requirement(requirement),
                 dataset_context=format_profile(profile),
                 allowed_models=allowed,
-                constraints="\n".join(f"- {c}" for c in requirement.problem.constraints) or "- none",
-                knowledge=knowledge.as_prompt_text() if knowledge else "None available.",
-                feedback="\n".join(f"- {item}" for item in feedback) or "None (first attempt).",
+                constraints=data_lines(requirement.problem.constraints or ["none"]),
+                knowledge=data_lines(knowledge.insights if knowledge and knowledge.insights else ["None available."]),
+                feedback=data_lines(feedback or ["None (first attempt)."]),
             )
-            return self.llm_client.chat_structured(messages, ModelChoice)
-        except Exception as exc:  # the default ranking is always a safe fallback
+            return self.llm_client.chat_structured(messages, ModelChoice), None
+        except LLMValidationError as exc:  # malformed output after the client's retries: reject, never guess
+            logger.warning("Model selection output rejected: {}", exc)
+            return None, f"The model-selection output did not match the plan schema: {exc.errors or exc}"
+        except Exception as exc:  # unavailable LLM: the deterministic default ranking is a safe proposal
             logger.warning("Model selection by LLM failed ({}: {}); using the default ranking.", type(exc).__name__, exc)
-            return None
+            return None, None
 
     @staticmethod
     def _rank(
         choice: ModelChoice | None, requirement: UserRequirement, notes: list[str]
-    ) -> tuple[list[RankedCandidate], str]:
-        task = requirement.problem.task_type
-        allowed = set(model_zoo.candidate_names(task))
-        ranked: dict[str, RankedCandidate] = {}
-        for item in choice.candidates if choice else []:
-            name = model_zoo.normalize_model_name(item.name)
-            if name not in allowed:
-                notes.append(f"Model '{item.name}' is not in the model zoo for {task}; ignored.")
-            elif name not in ranked:
-                ranked[name] = RankedCandidate(name=name, reason=item.reason or "Chosen by the model agent.")
-        source = "llm" if ranked else "default"
-        if choice is not None and not ranked:
-            notes.append("The LLM chose no usable model; using the default ranking.")
+    ) -> tuple[list[str], dict[str, str], str]:
+        """User-requested models first, then the LLM's ranking, then the default ranking (up to MAX_CANDIDATES).
 
-        requested = [model_zoo.normalize_model_name(m.name) for m in requirement.models if m.name]
-        user_first = [RankedCandidate(name=n, reason="Requested by the user.") for n in dict.fromkeys(requested) if n in allowed]
-        ordered = {c.name: c for c in user_first} | {n: c for n, c in ranked.items() if n not in requested}
+        Names are only canonicalised (case, spaces, known aliases); unknown or repeated names stay in the list so
+        the plan contract rejects them.
+        """
+        family = model_zoo.task_family(requirement.problem.task_type)
+        items = choice.candidates if choice else []
+        llm_names = [model_zoo.normalize_model_name(item.name) for item in items]
+        reasons: dict[str, str] = {}
+        for item, name in zip(items, llm_names, strict=True):
+            reasons.setdefault(name, item.reason or "Chosen by the model agent.")
+        source = "llm" if llm_names else "default"
+        if choice is not None and not llm_names:
+            notes.append("The LLM chose no model; using the default ranking.")
 
-        family = model_zoo.task_family(task)
+        requested = list(dict.fromkeys(model_zoo.normalize_model_name(m.name) for m in requirement.models if m.name))
+        reasons |= {name: "Requested by the user." for name in requested}
+        ordered = requested + [name for name in llm_names if name not in requested]
         for name in model_zoo.DEFAULT_RANKING[family]:
+            if len(ordered) >= MAX_CANDIDATES:
+                break
             if name not in ordered:
-                ordered[name] = RankedCandidate(name=name, reason=model_zoo.REGISTRY[family][name].description)
-        return list(ordered.values()), source
+                ordered.append(name)
+        return ordered, reasons, source
 
 
-def parse_constraints(texts: list[str]) -> ModelConstraints:
-    """Read inference-time, training-time and explainability limits from free-text constraints."""
+def parse_constraint_values(texts: list[str]) -> dict[str, Any]:
+    """Inference-time, training-time and explainability limits from free-text constraints, as PlanConstraints fields."""
     inference_ms: float | None = None
     train_s: float | None = None
     interpretable = False
@@ -159,21 +199,17 @@ def parse_constraints(texts: list[str]) -> ModelConstraints:
             train_s = value if train_s is None else min(train_s, value)
         if _EXPLAINABLE.search(text):
             interpretable = True
-    return ModelConstraints(max_inference_ms_per_row=inference_ms, max_train_time_s=train_s, prefer_interpretable=interpretable)
+    return {"max_inference_ms_per_row": inference_ms, "max_train_minutes": None if train_s is None else train_s / 60,
+            "prefer_interpretable": interpretable}
 
 
-def budget_for(mode: BudgetMode, constraints: ModelConstraints, notes: list[str]) -> TrainingBudget:
-    """The preset for `mode`, shrunk to fit a training-time limit if the user gave one."""
-    budget = BUDGET_PRESETS[mode].model_copy()
-    if constraints.max_train_time_s is not None:
-        total = max(1.0, constraints.max_train_time_s * TRAIN_TIME_HEADROOM)
-        if total < budget.total_timeout_s:
-            budget = budget.model_copy(update={
-                "total_timeout_s": total,
-                "timeout_per_model_s": min(budget.timeout_per_model_s, max(1.0, total / budget.max_candidates)),
-            })
-            notes.append(f"Search time limited to {total:g}s to respect the training-time constraint.")
-    return budget
+def parse_constraints(texts: list[str]) -> ModelConstraints:
+    """The same limits as ModelConstraints (training time in seconds)."""
+    values = parse_constraint_values(texts)
+    minutes = values["max_train_minutes"]
+    return ModelConstraints(max_inference_ms_per_row=values["max_inference_ms_per_row"],
+                            max_train_time_s=None if minutes is None else round(minutes * 60, 6),
+                            prefer_interpretable=values["prefer_interpretable"])
 
 
 def choose_primary_metric(
@@ -190,24 +226,6 @@ def choose_primary_metric(
                 notes.append(f"Metric '{wanted[0]}' cannot be used here; optimising '{name}' instead.")
             return name
     raise ValueError(f"No supported metric for task {task}.")  # unreachable: task defaults are always supported
-
-
-def _ensure_interpretable(
-    candidates: list[RankedCandidate], constraints: ModelConstraints, max_candidates: int, task: str, notes: list[str]
-) -> list[RankedCandidate]:
-    """If the user wants explainability, make sure an interpretable model is among those that will be trained."""
-    if not constraints.prefer_interpretable:
-        return candidates
-    interpretable = {c.name for c in model_zoo.candidates_for(task) if c.interpretable}
-    if any(c.name in interpretable for c in candidates[:max_candidates]):
-        return candidates
-    for index, candidate in enumerate(candidates):
-        if candidate.name in interpretable:
-            moved = candidates[:index] + candidates[index + 1:]
-            moved.insert(max_candidates - 1, candidate)
-            notes.append(f"Included '{candidate.name}' because the user asked for an explainable model.")
-            return moved
-    return candidates
 
 
 def _labels_available(requirement: UserRequirement, profile: DatasetProfile | None) -> bool:

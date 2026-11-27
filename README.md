@@ -11,7 +11,7 @@ actionable decisions.**
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Tests](https://img.shields.io/badge/tests-506%20passed-2EA44F)](#testing)
+[![Tests](https://img.shields.io/badge/tests-589%20passed-2EA44F)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-2EA44F)](#testing)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -38,10 +38,11 @@ actionable decisions.**
 - [Example walkthrough: customer churn](#example-walkthrough-customer-churn)
 - [Screenshots](#screenshots)
 - [Evaluation](#evaluation) — [methodology](#methodology), [results](#results), [ablation](#ablation),
-  [robustness](#robustness), [figures](#figures)
+  [robustness](#robustness), [explanation stability](#explanation-stability), [figures](#figures)
 - [Tech stack](#tech-stack)
 - [Quick start](#quick-start) · [Configuration](#configuration) · [API endpoints](#api-endpoints)
-- [Security and privacy](#security-and-privacy) · [Deployment](#deployment)
+- [Security and privacy](#security-and-privacy) · [Security & trust (v1.1)](#security--trust-v11) ·
+  [Deployment](#deployment)
 - [Project structure](#project-structure) · [Testing](#testing)
 - [Limitations](#limitations) · [Roadmap](#roadmap) · [FAQ](#faq) · [Contributing](#contributing)
 - [Documentation](#documentation) · [Team](#team) · [Acknowledgements](#acknowledgements) ·
@@ -513,6 +514,41 @@ target, IDs and time index) and **+5 random noise columns**.
 
 Missing values hurt most (largest NPS drop 0.087, customer segments), while random noise columns barely matter (largest NPS drop 0.005): the tuned models largely ignore uninformative features. Positive change = better than on clean data (for RMSE, lower error counts as better).
 
+### Explanation stability
+
+*Do the explanations stay the same when the same analysis is run again?* `scripts/evaluate_stability.py` (v1.1) runs
+the system offline on each dataset with seeds 42, 43 and 44 — which changes the data split, the hyper-parameter search
+and the models' random state — and compares the global drivers (SHAP, summed back to original columns; cluster
+separation for clustering). Per dataset, over the three seed pairs: **Spearman ρ** of the driver ranks (union of both
+top-10 lists) and the **top-5 overlap** (Jaccard; 1 = same five drivers). Source of every number:
+[docs/results/stability.json](docs/results/stability.json) (report: [stability.md](docs/results/stability.md)).
+
+| Dataset | Task | Drivers | Spearman ρ | Top-5 Jaccard | Top driver | Verdict |
+|---|---|---:|---:|---:|---|---|
+| Customer churn | binary classification | 10 | 0.960 ± 0.031 | 1.000 ± 0.000 | `contract_type` (all seeds) | stable |
+| Crop price | regression | 10 | 0.976 ± 0.012 | 1.000 ± 0.000 | `yield_t_per_ha` / `crop` / `yield_t_per_ha` | stable |
+| Store sales | time-series forecasting | 6 | 1.000 ± 0.000 | 1.000 ± 0.000 | `date` (all seeds) | stable |
+| Delivery status | 3-class classification | 10 | 0.903 ± 0.084 | 0.778 ± 0.192 | `shipping_mode` (all seeds) | moderately stable |
+| Customer segments | clustering | 6 | 0.733 ± 0.231 | 1.000 ± 0.000 | `online_share_pct` (all seeds) | moderately stable |
+
+**What-if stability** — the same change on the same base row (the typical record of the at-risk class) under each
+seed's model:
+
+| Dataset | Output | Change | Before | After | Change in probability |
+|---|---|---|---:|---:|---:|
+| Customer churn | P(churn = Yes) | `contract_type` → 'Two year' | 0.737 ± 0.010 | 0.211 ± 0.008 | −0.527 ± 0.004 |
+| Delivery status | P(Very late) | `shipping_mode` → 'Express' | 0.445 ± 0.048 | 0.101 ± 0.089 | −0.344 ± 0.045 |
+
+Rankings are stable on 3 of 5 datasets, and the top driver is the same under every seed on 4 of 5. The two weaker
+cases have clear causes: on delivery status, seed 44 selected LightGBM instead of logistic regression, and its top 5
+swaps `peak_season` for `order_date` (in the synthetic data, peak season is defined by the order month); on customer segments,
+the five behavioural columns have nearly equal importance (15.2%–19.0%), so they change places while the top-5 set
+stays the same. Every what-if moves in the same direction under all seeds; the churn effect is very consistent, while
+the delivery result is wider because the LightGBM model (seed 44) predicts 0.498 → 0.204 against 0.436 → 0.053 and
+0.403 → 0.048 for the logistic models. Treat a single run's exact probability with that margin.
+
+<p align="center"><img src="docs/results/figures/stability.png" alt="Driver ranking agreement between seeds and the same what-if under each seed's model" width="860"></p>
+
 ### Figures
 
 <p align="center"><img src="docs/results/figures/benchmark_vs_baseline.png" alt="Model vs trivial baseline per dataset" width="720"></p>
@@ -675,6 +711,21 @@ Every error is JSON `{"error": <code>, "detail": <message>}` — for example `40
 - **Public demo mode.** For shared hosting: no code execution, small uploads, fast budget only, automatic deletion of
   old runs and a warning banner — see [Public demo mode](#public-demo-mode).
 
+## Security & trust (v1.1)
+
+v1.1 treats two things as untrusted: what the LLM writes and what the uploaded data contains. Neither can start
+training on its own, steer a prompt, or put an unchecked number in front of a decision maker. Details:
+[docs/architecture.md § 10.1](docs/architecture.md#101-security-and-trust-v11).
+
+| Safeguard | What it does | Code |
+|---|---|---|
+| **Plan contract** | The only planner output that can drive execution is an `AnalysisPlan`: strict, frozen, extra keys forbidden. Task, metric and models come from closed lists built from the metric registry and the model zoo (1–6 models, no duplicates); budget, constraints and actionable features (≤ 20) are bounded. Every problem is reported in one sentence. | `idss/core/plan_contract.py` |
+| **Independent validation** | Without the LLM, the plan is checked against the data and hard limits: the target exists and suits the task (not an ID, text, date, empty or constant column), the time column is a date, features exist, the budget fits. A rejected plan is replaced by a fallback built from a fresh profile of the data — never from the LLM's text — and the Run Monitor shows why. Training starts only from a plan sealed by the validator. | `idss/execution/plan_validator.py` |
+| **Prompt-injection defence** | Every dataset-derived string sent to an LLM (column names, categories, file names, errors) is cleaned — hidden characters removed, tag delimiters neutralised, length capped — and wrapped in `<data>…</data>`; every system prompt says that text is data, never instructions. Instruction-like text in headers or cells ("ignore previous instructions", role tags, …) is flagged on the Upload page and in the report. Raw rows are never sent. | `idss/core/sanitize.py` |
+| **Number provenance** | The LLM writes the decision brief with `{{key}}` placeholders only and cannot type a digit; code fills in the values from a facts registry. The report prints every number through that registry and ends with a **"Sources of numbers"** appendix (number → key → source file). | `idss/decision/facts.py` |
+
+Tests: `tests/test_v11_plan_contract.py` and `tests/test_v11_security.py`.
+
 ## Deployment
 
 ### Local
@@ -741,17 +792,17 @@ visitor's browser — and the download buttons are used instead.
 ├── configs/             Typed settings from .env (pydantic-settings)
 ├── idss/
 │   ├── agents/          Requirement, Data, Knowledge, Model, Analysis, Insight agents, Verifier, Orchestrator
-│   ├── core/            LLM client (timeouts, capped retries), logger, schemas, prompt templates
+│   ├── core/            LLM client (timeouts, capped retries), schemas, plan contract, prompt sanitising, prompts
 │   ├── ml/              Loader, profiler, preprocessing, model zoo, Optuna tuner, trainer, evaluator, SHAP
-│   ├── decision/        What-if simulation, recommendations, PDF/Markdown report builder
+│   ├── decision/        What-if simulation, recommendations, facts registry, PDF/Markdown report builder
 │   ├── knowledge/       Offline TF-IDF retrieval over data/knowledge (+ optional web search)
-│   ├── execution/       Sandbox for LLM-written analysis code
+│   ├── execution/       Sandbox for LLM-written analysis code, independent plan validator
 │   └── storage/         Run directories, SQLite database, repository, public-demo retention
 ├── ui/                  Streamlit dashboard (8 pages), API client, charts, theme, embedded API mode
 ├── data/
 │   ├── samples/         Five synthetic sample datasets (scripts/make_samples.py)
 │   └── knowledge/       Best-practice notes indexed for retrieval-augmented planning
-├── scripts/             Run scripts, evaluation, diagrams, screenshots, demo GIF, report/poster/slide builders
+├── scripts/             Run scripts, evaluation (+ explanation stability), diagrams, screenshots, demo GIF, builders
 ├── tests/               Offline pytest suite (fake LLM, temporary workspace)
 ├── docs/                Architecture, user manual, API reference, testing, results, diagrams, report, assets
 └── workspace/           Run outputs, logs, uploads and the database (git-ignored)
@@ -768,8 +819,8 @@ python -m pytest -m live                                         # real LLM smok
 python -m ruff check .                                           # lint
 ```
 
-Latest run: **506 passed, 2 deselected** (live LLM tests), with
-**93% line coverage** (6,758 statements) over `idss`, `api`, `ui` and `configs`. At submission:
+**Current test suite (v1.1):** **589 passed, 2 deselected** (live LLM tests) in a fresh `pytest -q --cov` run, with
+**93% line coverage** (7,635 statements) over `idss`, `api`, `ui` and `configs`. At submission:
 449 tests, 447 offline passing ([docs/testing.md](docs/testing.md)). Every LLM call is replaced by a fake client, web
 search is disabled and the workspace is redirected to a temporary folder, so the suite never touches the network or
 your data.
@@ -887,6 +938,8 @@ Please do not commit `.env`, anything in `workspace/`, or code from the AutoML-A
 | [Architecture](docs/architecture.md) | Modules, state machine, design decisions, security and privacy |
 | [Testing](docs/testing.md) | Test inventory, coverage, what is tested |
 | [Evaluation](docs/results/evaluation.md) | Benchmark, ablation and robustness results with charts |
+| [Explanation stability](docs/results/stability.md) | How much drivers and what-if answers change between seeds (v1.1) |
+| [Changelog](CHANGELOG.md) | What changed in each release |
 | [Limitations and future work](docs/limitations_future_work.md) | Known limitations and next steps |
 | [Project report](docs/report/) | Full report content (Markdown chapters; Word/PDF in `docs/report/final/`) |
 
@@ -932,7 +985,7 @@ If you use IDSS in your work, please cite it. GitHub shows a **“Cite this repo
   title  = {{IDSS}: Intelligent Decision Support System Using Generative {AI} and Machine Learning},
   author = {Patil, Raj Vishwas and Patil, Bhavesh Vinod and Naval, Chaitany Rajesh and Patil, Varun Darshan},
   year   = {2026},
-  version = {1.0.0},
+  version = {1.1.0},
   license = {MIT},
   note   = {Final-year B.Tech project, G H Raisoni College of Engineering \& Management, Jalgaon}
 }

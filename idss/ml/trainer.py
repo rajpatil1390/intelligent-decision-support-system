@@ -220,7 +220,7 @@ class AutoMLTrainer:
         if supervised and label_column is None:
             raise TrainingError(f"Target column '{plan.target}' is not in the data.")
 
-        cleaned, _ = clean_dataset(df, label_column if supervised else None, task, profile)
+        cleaned, _ = clean_dataset(df, label_column if supervised else None, task, profile, time_column=plan.time_column)
         if not supervised and label_column is not None and cleaned[label_column].isna().any():
             notes.append(f"Ground-truth column '{label_column}' has missing values; clustering is scored without it.")
             label_column = None
@@ -228,7 +228,7 @@ class AutoMLTrainer:
         holdout = Holdout(test)
 
         if family == "time_series":
-            time_column = profile.time_column or next(iter(profile.columns_of("datetime")), None)
+            time_column = plan.time_column or profile.time_column or next(iter(profile.columns_of("datetime")), None)
             if time_column is None:
                 raise TrainingError("Time-series forecasting needs a date/time column, but none was found.")
             period = infer_seasonal_period(train[time_column])

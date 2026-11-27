@@ -1,10 +1,12 @@
 """Analysis Agent: answer a custom question about the user's data with LLM-written pandas code.
 
 The LLM sees column names and types only (never values) and writes code; the code runs in the sandbox.
-If it fails, the LLM gets exactly one repair attempt with the error message. The answer text is built
+If it fails, the LLM gets exactly one repair attempt with the error message (quoted literals that may be cell
+values hidden, the rest cleaned and sent inside a <data> block). The answer text is built
 deterministically from the sandbox output, so raw result values are not sent back to the LLM.
 """
 
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -14,6 +16,7 @@ from pydantic import BaseModel, Field
 from idss.core.llm_client import LLMClient, LLMError
 from idss.core.logger import get_logger
 from idss.core.prompts import format_columns, render_prompt
+from idss.core.sanitize import clean, data_block
 from idss.core.schemas import DatasetProfile
 from idss.execution.sandbox import DEFAULT_TIMEOUT_S, SandboxResult, run_code
 
@@ -21,6 +24,7 @@ logger = get_logger()
 
 MAX_ANSWER_ITEMS = 20
 MAX_STDOUT_IN_ANSWER = 1_000
+_QUOTED = re.compile(r"(['\"])(.{0,200}?)\1")
 
 
 class AnalysisCode(BaseModel):
@@ -59,7 +63,8 @@ class AnalysisAgent:
             logger.info("Analysis code failed ({}); asking the LLM for one repair.", run.error)
             try:
                 generated = self._generate("analysis_repair", question=question, columns=columns,
-                                           code=generated.code, error=run.error or "unknown error")
+                                           code=generated.code, error=data_block(clean(
+                                               scrub_error(run.error or "unknown error", profile, generated.code), 1_000)))
             except LLMError as exc:
                 return _failed(question, f"The analysis failed ({run.error}) and could not be repaired: {exc}",
                                generated.code, attempts)
@@ -82,6 +87,20 @@ class AnalysisAgent:
         if self.llm_client is None:
             raise LLMError("No LLM client is configured.")
         return self.llm_client.chat_structured(render_prompt(prompt, **variables), AnalysisCode)
+
+
+def scrub_error(error: str, profile: DatasetProfile | None, code: str = "") -> str:
+    """Quoted literals in an error message can be cell values ("could not convert string to float: 'x'"): they are
+    hidden before the message goes back to the LLM. Column names and literals the failed code itself contains
+    (such as a misspelled column in a KeyError) are kept, as the repair needs them."""
+    columns = {col.name for col in profile.columns} if profile else set()
+
+    def hide(match: re.Match[str]) -> str:
+        literal = match.group(2)
+        keep = literal in columns or (literal and literal in code)
+        return match.group(0) if keep else f"{match.group(1)}…{match.group(1)}"
+
+    return _QUOTED.sub(hide, error)
 
 
 def format_answer(explanation: str, run: SandboxResult) -> str:

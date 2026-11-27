@@ -25,7 +25,7 @@ deployment (`deployment_diagram.png`) — exist as PNG only.
 | Orchestration | Resumable state machine, one handler per state | `idss/agents/manager.py` |
 | Agents | Requirement, Data, Knowledge, Model, Verifier, Analysis, Insight | `idss/agents/` |
 | Engines | AutoML engine, decision layer, offline knowledge base, sandbox | `idss/ml/`, `idss/decision/`, `idss/knowledge/`, `idss/execution/` |
-| Infrastructure | LLM client, SQLite + run workspace, settings, logging | `idss/core/`, `idss/storage/`, `configs/` |
+| Infrastructure | LLM client, plan contract, prompt sanitising, SQLite + run workspace, settings, logging | `idss/core/`, `idss/storage/`, `configs/` |
 
 ```mermaid
 flowchart TB
@@ -58,15 +58,18 @@ flowchart TB
 | `configs/settings.py` | Typed settings from `.env` (`get_settings()`); keys are `SecretStr`, never logged |
 | `idss/core/llm_client.py` | The only door to the LLM: OpenAI-compatible client, timeout on every call, ≤ 3 retries with exponential backoff, structured (Pydantic) outputs |
 | `idss/core/schemas.py` | Pydantic v2 models for everything that crosses a module boundary |
+| `idss/core/plan_contract.py` | v1.1: `AnalysisPlan`, the only planner output that can drive execution: strict, frozen, extra keys forbidden; task, metric and models from closed lists built from the metric registry and the model zoo; bounded budget, constraints and actionable features; `parse_plan()` gives one reason per problem |
+| `idss/core/sanitize.py` | v1.1: prompt-safe dataset text (hidden characters removed, tag delimiters neutralised, lengths capped), `<data>…</data>` blocks and the data rule every system prompt states; prompt-injection detector for headers and cells |
 | `idss/core/prompts/` | Prompt templates (`## system` / `## user`, `$var` placeholders) |
 | `idss/agents/requirement_agent.py` | Relevance check, parse free text → `UserRequirement`, deterministic repair against the data, sufficiency check → clarifying questions |
 | `idss/agents/data_agent.py` | Load, profile, clean, split 70/20/10, fit the preprocessor; only aggregates go to the LLM |
 | `idss/agents/knowledge_agent.py` | Retrieve best practices from the offline index and condense them into a `KnowledgeBrief` |
-| `idss/agents/model_agent.py` | Rank models from the zoo only; parse constraints (latency, training time, explainability) into a budget |
+| `idss/agents/model_agent.py` | Rank models from the zoo only; parse constraints (latency, training time, explainability) into a budget; hands over a `PlanProposal`, never an executable plan |
+| `idss/execution/plan_validator.py` | v1.1: checks the proposed plan against the data and the settings' hard limits without the LLM; returns a sealed `ValidatedPlan` or `PlanRejected` with reasons, and builds a fallback plan from a fresh data profile (never from the LLM's text) |
 | `idss/ml/` | AutoML engine: `model_zoo` (the only trainable models), `tuner` (Optuna TPE + median pruner), `evaluator` (metric registry, complexity), `trainer` (search, selection, threshold tuning, refit, single test evaluation), `explain` (SHAP / permutation, forecasts, cluster profiles) |
 | `idss/agents/verifier.py` | Seven rule-based checks decide pass/fail; optional LLM review adds concerns and recommendations |
-| `idss/decision/` | `what_if` (record and segment simulation), `recommender` (actionable levers, risk tiers, counterfactuals), `report_builder` (PDF + Markdown) |
-| `idss/agents/insight_agent.py` | Decision brief from computed facts only; a grounding check rejects any number not in the facts |
+| `idss/decision/` | `what_if` (record and segment simulation), `recommender` (actionable levers, risk tiers, counterfactuals), `report_builder` (PDF + Markdown), `facts` (v1.1: facts registry, every number with a key and a source) |
+| `idss/agents/insight_agent.py` | Decision brief from computed facts only: since v1.1 the LLM writes `{{key}}` placeholders and code fills in the values; a typed digit or unknown key is rejected, then the grounding check runs as a second layer |
 | `idss/agents/analysis_agent.py` + `idss/execution/` | Ad-hoc questions: LLM-written pandas code, statically checked and run in an isolated child process |
 | `idss/agents/manager.py` | Orchestrator: state machine, persistence after every transition, bounded loops, DB mirroring |
 | `idss/storage/` | Run ids and folders, SQLAlchemy models, repository |
@@ -88,7 +91,7 @@ stateDiagram-v2
     VALIDATE --> FAILED: still incomplete after 2 revisions
     VALIDATE --> PROFILE: complete
     PROFILE --> PLAN: profile + knowledge brief
-    PLAN --> TRAIN: ModelPlan
+    PLAN --> TRAIN: ValidatedPlan (sealed)
     TRAIN --> VERIFY: TrainingResult
     VERIFY --> PLAN: checks failed (re-plan once, full budget)
     VERIFY --> EXPLAIN: passed, or still failing (flagged)
@@ -103,6 +106,11 @@ stateDiagram-v2
 Every handler returns `(next_state, message)`. After each transition the whole `RunContext` is written atomically
 to `workspace/runs/<run_id>/state.json` and mirrored into SQLite, so a run can be resumed (`resume(run_id)`) or
 inspected while it works. Loops are bounded: two clarification rounds, one re-plan, 50 steps per call.
+
+Since v1.1, PLAN hands the Model Agent's proposal to the independent plan validator. A rejected proposal is replaced
+by a fallback plan built from a fresh profile of the data (the reasons are shown on the Run Monitor); if the fallback
+fails too, the run moves to `FAILED`. The transition into TRAIN is refused unless the plan was sealed by the validator
+in the same process; a plan read back from `state.json` or changed after sealing is validated again first.
 
 ## 4. One run, end to end
 
@@ -308,3 +316,56 @@ AutoML. The reference implementation was read for ideas only; no code was copied
   a failing state handler moves the run to `FAILED` with a message instead of crashing; errors are returned as
   `{error, detail}` without stack traces.
 - **Bounded loops.** At most two clarification rounds, one re-plan and 50 steps per call; one training run at a time.
+
+### 10.1 Security and trust (v1.1)
+
+v1.1 treats two things as untrusted input: the LLM's output and the uploaded data. Three boundaries keep them from
+driving execution or putting numbers in front of a decision maker.
+
+```mermaid
+flowchart LR
+    subgraph plan[Plan boundary]
+        llm1[Model Agent<br/>LLM proposal] --> contract[plan_contract<br/>AnalysisPlan, strict]
+        contract --> validator[plan_validator<br/>data + hard limits]
+        validator -- rejected --> fallback[fallback plan<br/>fresh data profile]
+        fallback --> validator
+        validator -- sealed --> trainer[AutoML trainer]
+    end
+    subgraph prompt[Prompt boundary]
+        data[(uploaded data)] --> sanitize[sanitize<br/>clean + data blocks]
+        data --> detector[injection detector<br/>profile warning]
+        sanitize --> llm2[LLM prompts]
+    end
+    subgraph numbers[Number boundary]
+        facts[facts registry<br/>key + source] --> view[placeholders<br/>for the LLM]
+        view --> llm3[Insight Agent<br/>writes keys only]
+        llm3 --> render[code renders values]
+        facts --> render
+        render --> report[brief + report<br/>Sources of numbers]
+    end
+```
+
+- **Plan contract** (`idss/core/plan_contract.py`). The only planner output that can drive execution is an
+  `AnalysisPlan`: a strict, frozen Pydantic model with extra keys forbidden. Task type, primary metric and candidate
+  models are closed lists generated from the metric registry and the model zoo and checked per task (1–6 models, no
+  duplicates, no baselines); constraints, budget mode, actionable features (≤ 20) and the time column are bounded.
+  `parse_plan()` returns one sentence per problem.
+- **Independent validation** (`idss/execution/plan_validator.py`). Without asking the LLM, the validator checks the
+  plan against the data and the settings: the target exists and suits the task (not an ID, text, date, empty or
+  constant column), the time column is a date, actionable features exist and are not IDs, the metric is defined, at
+  least one usable feature remains, and the budget and training-time constraint stay inside hard limits; row and file
+  limits are fatal. The public demo turns a full budget into fast. A rejected plan is replaced by a fallback plan built
+  from a fresh profile of the data, and the requirement is aligned to it; TRAIN only accepts a plan sealed in the same
+  process (fingerprinted, re-validated after a restart).
+- **Prompt-injection defence** (`idss/core/sanitize.py`). Every dataset-derived string that reaches a prompt (column
+  names, categories, file names, knowledge snippets, sandbox errors) is cleaned — control, zero-width and bidi
+  characters removed, `<…>` delimiters turned into `‹…›`, lengths capped — and placed inside `<data>…</data>`; every
+  system prompt states that such text is data, never instructions. A detector (NFKC-normalised) flags instruction-like
+  text in headers and cells ("ignore previous instructions", role tags, chat-template tokens, …) as a profile warning,
+  shown on the Upload page and in the report under "Security checks". Raw rows are still never sent.
+- **Number provenance** (`idss/decision/facts.py`). A facts registry gives every computed number a key (for example
+  `metrics.test.f1`, `risk_tiers.high.count`, `drivers[0].share`) and a source (`metrics.json`, `leaderboard.json`, a
+  section of `state.json`, …). The Insight Agent's LLM sees numbers only as `{{key}}` placeholders and may not type a
+  digit; code renders the values, the grounding check runs as a second layer, and a failing draft is regenerated once
+  and then replaced by the template. The report prints every number through the registry and ends with a
+  "Sources of numbers" appendix (number → key → source).

@@ -4,7 +4,6 @@ All data decisions are deterministic. The LLM is used for one thing only: a shor
 the profile. If that call fails for any reason, a template summary is used instead.
 """
 
-import json
 from collections import Counter
 from pathlib import Path
 from typing import Literal
@@ -14,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from idss.core.llm_client import LLMClient
 from idss.core.logger import get_logger
+from idss.core.sanitize import DATA_RULE, data_json
 from idss.core.schemas import TASK_DESCRIPTIONS, DatasetProfile, TaskType, UserRequirement
 from idss.ml.data_loader import load_dataset
 from idss.ml.preprocess import build_preprocessor, clean_dataset, plan_columns, save_preprocessor, split_data
@@ -25,7 +25,7 @@ logger = get_logger()
 _SUMMARY_SYSTEM_PROMPT = (
     "You are a data analyst explaining a dataset to a business user with no technical background. "
     "Write 3 to 5 short sentences of plain English: what the data contains, what will be predicted, "
-    "and the most important data-quality issues. No jargon, no markdown, no bullet points."
+    "and the most important data-quality issues. No jargon, no markdown, no bullet points. " + DATA_RULE
 )
 
 
@@ -73,6 +73,8 @@ class DataAgent:
 
         requested_target, requested_task = _requested_target_and_task(user_requirement)
         profile = self._profile(df, requested_target, requested_task, steps)
+        if all(col.n_unique <= 1 for col in profile.columns):
+            raise ValueError("No column varies: every column has a single value (or none), so there is nothing to learn.")
         task_type = requested_task or profile.suggested_task_type
         target = None if task_type == "tabular_clustering" else profile.suggested_target
         if task_type is None or (target is None and task_type != "tabular_clustering"):
@@ -131,7 +133,7 @@ class DataAgent:
         if self.llm_client is not None:
             messages = [
                 {"role": "system", "content": _SUMMARY_SYSTEM_PROMPT},
-                {"role": "user", "content": json.dumps(_summary_facts(profile, target, task_type), ensure_ascii=False)},
+                {"role": "user", "content": data_json(_summary_facts(profile, target, task_type))},
             ]
             try:
                 summary = self.llm_client.chat(messages, temperature=0.3).strip()

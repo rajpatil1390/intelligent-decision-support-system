@@ -178,8 +178,9 @@ Query: `limit`, `offset`, `dataset_id`, `state` (one of the run states, e.g. `DO
 ### GET /runs/{run_id}
 
 Everything in the summary above plus `message`, `target`, `test_metrics`, `decision_threshold`, `verification`
-(checks with pass/fail and detail), `pending_questions`, `answers`, `errors` and the `events` timeline. Poll it
-every few seconds while a run is active; `progress` is 0–100 by state (INIT 0 … TRAIN 30, VERIFY 70, EXPLAIN 75,
+(checks with pass/fail and detail), `pending_questions`, `answers`, `errors`, the plan review (v1.1: `plan_source`
+= `llm` / `default` / `fallback`, `plan_fallback` = the proposed plan was rejected by the plan validator, and
+`plan_rejections` = why) and the `events` timeline. Poll it every few seconds while a run is active; `progress` is 0–100 by state (INIT 0 … TRAIN 30, VERIFY 70, EXPLAIN 75,
 INSIGHT 90, REPORT 95, DONE / FAILED 100).
 
 ```json
@@ -194,6 +195,7 @@ INSIGHT 90, REPORT 95, DONE / FAILED 100).
     {"name": "overfitting", "passed": true, "detail": "f1: train 0.649 vs test 0.623; gap 0.026 (limit 0.15)."}
   ], "llm_verdict": null, "llm_concerns": [], "recommendations": []},
   "pending_questions": [], "answers": [], "errors": [],
+  "plan_source": "default", "plan_fallback": false, "plan_rejections": [],
   "message": "About 30% of customers are at high risk ... Full report: /runs/20261006-101530-a1b2c3/report.pdf",
   "events": [
     {"ts": "2026-10-06T10:15:30Z", "from_state": null, "to_state": "INIT", "message": "Run created."},
@@ -296,12 +298,15 @@ a ±1.96 × validation-RMSE interval.
   "executive_summary": "About 30% of customers are at high risk of churning ...",
   "key_findings": ["..."], "recommended_actions": ["..."], "risks_and_limitations": ["..."], "next_steps": ["..."],
   "generated_by": "template",
-  "grounding": {"passed": true, "attempts": 1, "unsupported_numbers": []}
+  "grounding": {"passed": true, "attempts": 1, "unsupported_numbers": [], "unknown_keys": []},
+  "placeholder_text": {"executive_summary": "About {{risk_tiers.high.share}} of customers are at high risk ...", "...": "..."}
 }
 ```
 
-`generated_by` is `llm` when an LLM wrote the brief and every number in it was found in the computed facts;
-otherwise the deterministic template is used.
+`generated_by` is `llm` when an LLM wrote the brief and it passed the number checks (v1.1: every number written as a
+`{{key}}` placeholder of the run's facts registry and filled in by code, no digit typed outside a placeholder, every
+key known, and every resulting number found in the facts); otherwise the deterministic template is used.
+`placeholder_text` holds the brief before the numbers were filled in.
 
 ### POST /runs/{run_id}/what-if
 

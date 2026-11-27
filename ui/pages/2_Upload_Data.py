@@ -12,6 +12,7 @@ from ui import embedded_api
 embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 FILE_TYPES = ["csv", "xlsx", "json", "parquet"]  # what the backend accepts
+INJECTION_WARNING = "Possible prompt-injection text in column"  # idss.core.sanitize.INJECTION_WARNING; ui/ never imports idss
 
 common.shell()
 common.page_title("Upload data", f"Upload a dataset (max {common.fmt_num(common.max_upload_mb())} MB) or pick one you "
@@ -68,7 +69,10 @@ with st.container(border=True):
                "otherwise these suggestions are used.")
 
 for warning in profile.get("warnings") or []:
-    st.warning(warning, icon=":material/warning:")
+    if warning.startswith(INJECTION_WARNING):  # v1.1: shown as a security alert
+        st.error(warning, icon=":material/gpp_bad:")
+    else:
+        st.warning(warning, icon=":material/warning:")
 
 styles.section("Columns")
 st.caption("🎯 = suggested target")

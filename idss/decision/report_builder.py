@@ -1,12 +1,15 @@
 """Decision report as PDF (reportlab) and Markdown, from the same list of content blocks.
 
 The report is assembled from the run's computed results only. Any missing part (a chart, verification,
-recommendations, ...) is skipped or replaced by a short note, never an error.
+recommendations, ...) is skipped or replaced by a short note, never an error. Since v1.1 every number is printed
+through the run's facts registry (idss.decision.facts), and the appendix "Sources of numbers" lists each printed
+number with its key and the file it comes from. Dataset warnings about possible prompt-injection text get their
+own "Security checks" section.
 """
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -18,7 +21,9 @@ from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from idss.core.logger import get_logger
+from idss.core.sanitize import INJECTION_WARNING, clean
 from idss.core.schemas import TASK_DESCRIPTIONS, DecisionInsight
+from idss.decision.facts import MISSING, FactsRegistry, UnknownFactKey, build_registry
 
 if TYPE_CHECKING:
     from idss.agents.manager import RunContext
@@ -31,6 +36,8 @@ MAX_LEADERBOARD_ROWS = 5
 MAX_DRIVER_ROWS = 10
 MAX_FORECAST_ROWS = 10
 IMAGE_WIDTH_CM = 15.5
+SOURCES_HEADING = "Sources of numbers"
+BRIEF_FIELDS = ("executive_summary", "key_findings", "recommended_actions", "risks_and_limitations", "next_steps")
 _PDF_REPLACEMENTS = {"→": "->", "≥": ">=", "≤": "<=", "—": "-", "–": "-", "’": "'", "‘": "'", "“": '"', "”": '"',
                      "…": "...", "•": "-", "≈": "~", "−": "-"}
 
@@ -46,44 +53,45 @@ class Block:
 
 def report_blocks(ctx: "RunContext", insight: DecisionInsight | None, charts: dict[str, str]) -> list[Block]:
     """All report content, in order. Shared by the PDF and Markdown renderers."""
+    facts = build_registry(ctx)
+    d = facts.display
     training, profile, requirement = ctx.training, ctx.profile, ctx.requirement
+    brief = _brief(facts, insight)
     blocks: list[Block] = [Block("title", PROJECT_NAME), Block("paragraph", "Decision report")]
     task = training.task_type if training else (requirement.problem.task_type if requirement else None)
+    if training is not None and training.target is not None:
+        target = d("model.target")
+    else:
+        target = facts.note("report.target", str(requirement.target if requirement else MISSING), "state.json (requirement)")
     blocks.append(Block("table", rows=[
         ["Item", "Value"],
-        ["Question", ctx.question.split("\n")[0]],
-        ["Date", f"{datetime.now():%Y-%m-%d %H:%M}"],
-        ["Dataset", Path(ctx.data_path).name],
-        ["Run id", ctx.run_id],
-        ["Task", TASK_DESCRIPTIONS.get(task, "-") if task else "-"],
-        ["Target", str(training.target if training else (requirement.target if requirement else "-"))],
-        ["Best model", training.best_model if training else "-"],
+        ["Question", d("question.text")],
+        ["Date", facts.show("report.date")],
+        ["Dataset", d("dataset.file")],
+        ["Run id", d("run.id")],
+        ["Task", TASK_DESCRIPTIONS.get(task, MISSING) if task else MISSING],
+        ["Target", target],
+        ["Best model", d("model.name") if training else MISSING],
     ]))
     blocks.append(Block("pagebreak"))
 
     blocks.append(Block("heading", "1. Executive summary"))
-    if insight is not None:
-        blocks += [Block("paragraph", insight.executive_summary), Block("subheading", "Key findings"),
-                   Block("bullets", items=insight.key_findings)]
+    if brief is not None:
+        blocks += [Block("paragraph", brief["executive_summary"]), Block("subheading", "Key findings"),
+                   Block("bullets", items=brief["key_findings"])]
     else:
-        blocks.append(Block("paragraph", ctx.message or "No summary is available for this run."))
+        blocks.append(Block("paragraph", facts.note("run.message", ctx.message or "No summary is available for this run.",
+                                                    "state.json (message)")))
 
     blocks.append(Block("heading", "2. Data overview"))
     if profile is not None:
-        blocks.append(Block("paragraph", f"{profile.n_rows:,} rows and {profile.n_cols} columns; "
-                                         f"{profile.duplicate_rows:,} duplicate rows; {profile.memory_mb:.2f} MB in memory."))
-        rows = [["Column", "Type", "Missing %", "Distinct"]] + [
-            [c.name, c.semantic_type, f"{c.missing_pct:g}", f"{c.n_unique:,}"] for c in profile.columns[:MAX_PROFILE_ROWS]
-        ]
-        blocks.append(Block("table", rows=rows))
-        blocks += [Block("subheading", "Data-quality warnings"),
-                   Block("bullets", items=profile.warnings or ["No data-quality warnings."])]
+        blocks += _data_blocks(facts, profile)
     else:
         blocks.append(Block("paragraph", "No data profile is available."))
 
     blocks.append(Block("heading", "3. Model results"))
     if training is not None:
-        blocks += _model_blocks(training, charts)
+        blocks += _model_blocks(facts, training, charts)
     else:
         blocks.append(Block("paragraph", "No model was trained in this run."))
 
@@ -91,153 +99,232 @@ def report_blocks(ctx: "RunContext", insight: DecisionInsight | None, charts: di
     verification = ctx.verification
     if verification is not None:
         blocks.append(Block("paragraph", f"Overall: {'PASSED' if verification.passed else 'NOT PASSED'} "
-                                         f"({sum(c.passed for c in verification.checks)}/{len(verification.checks)} checks)."))
+                                         f"({d('verification.n_passed')}/{d('verification.n_checks')} checks)."))
         blocks.append(Block("table", rows=[["Check", "Result", "Detail"]] + [
-            [c.name, "pass" if c.passed else "FAIL", c.detail] for c in verification.checks]))
+            [c.name, "pass" if c.passed else "FAIL", d(f"verification.checks[{i}].detail")]
+            for i, c in enumerate(verification.checks)]))
         if verification.llm_verdict:
-            blocks.append(Block("paragraph", f"Reviewer verdict: {verification.llm_verdict}"))
+            if facts.raw_numbers(verification.llm_verdict):  # an LLM's number cannot be traced to a computed result
+                blocks.append(Block("paragraph", "The LLM reviewer's verdict is not shown because it contains numbers "
+                                                 "that cannot be traced to a computed result."))
+            else:
+                blocks.append(Block("paragraph", f"Reviewer verdict: {clean(verification.llm_verdict, 1_000)}"))
     else:
         blocks.append(Block("paragraph", "Verification was not run."))
 
     blocks.append(Block("heading", "5. Key drivers"))
-    blocks += _driver_blocks(ctx, charts)
+    blocks += _driver_blocks(facts, ctx, charts)
 
     blocks.append(Block("heading", "6. Recommendations"))
     recommendations = ctx.recommendations
     if recommendations is not None and recommendations.recommendations:
         blocks.append(Block("table", rows=[["Action", "Expected impact", "Confidence"]] + [
-            [r.action, f"{r.expected_impact:,.4g} ({r.impact_unit})", r.confidence] for r in recommendations.recommendations]))
-    if insight is not None:
-        blocks += [Block("subheading", "In business terms"), Block("bullets", items=insight.recommended_actions)]
+            [d(f"recommendations[{i}].action"),
+             f"{d(f'recommendations[{i}].expected_impact')} ({d(f'recommendations[{i}].impact_unit')})", r.confidence]
+            for i, r in enumerate(recommendations.recommendations)]))
+    if brief is not None:
+        blocks += [Block("subheading", "In business terms"), Block("bullets", items=brief["recommended_actions"])]
     if recommendations is not None and recommendations.notes:
-        blocks.append(Block("bullets", items=recommendations.notes))
-    if (recommendations is None or not recommendations.recommendations) and insight is None:
+        blocks.append(Block("bullets", items=[d(f"recommendation_notes[{i}]") for i in range(len(recommendations.notes))]))
+    if (recommendations is None or not recommendations.recommendations) and brief is None:
         blocks.append(Block("paragraph", "No recommendations are available."))
 
     blocks.append(Block("heading", "7. What-if example"))
     example = ctx.what_if_example
     if example is not None:
-        changes = ", ".join(f"{k} -> {v}" for k, v in example.changes.items())
-        rows = [["Item", "Value"], ["Change", changes], ["Output", example.output],
-                ["Before", _fmt(example.before)], ["After", _fmt(example.after)],
-                ["Change in output", "-" if example.delta is None else f"{example.delta:+.4g}"
-                 + ("" if example.delta_pct is None else f" ({example.delta_pct:+.2f}%)")]]
+        changes = ", ".join(f"{d(f'whatif[0].changes[{i}].feature')} -> {d(f'whatif[0].changes[{i}].value')}"
+                            for i in range(len(example.changes)))
+        delta = MISSING if example.delta is None else d("whatif[0].delta") + (
+            "" if example.delta_pct is None else f" ({d('whatif[0].delta_pct')})")
+        rows = [["Item", "Value"], ["Change", changes], ["Output", d("whatif[0].output")],
+                ["Before", d("whatif[0].before")], ["After", d("whatif[0].after")], ["Change in output", delta]]
         blocks.append(Block("table", rows=rows))
         if example.warnings:
-            blocks.append(Block("bullets", items=example.warnings))
+            blocks.append(Block("bullets", items=[d(f"whatif[0].warnings[{i}]") for i in range(len(example.warnings))]))
     else:
         blocks.append(Block("paragraph", "No what-if example was computed for this task."))
 
     blocks.append(Block("heading", "8. Risks and limitations"))
-    blocks.append(Block("bullets", items=insight.risks_and_limitations if insight else
+    blocks.append(Block("bullets", items=brief["risks_and_limitations"] if brief else
                         ["Results show associations in historical data, not guaranteed cause and effect."]))
-    if insight is not None:
-        blocks += [Block("subheading", "Next steps"), Block("bullets", items=insight.next_steps)]
+    if brief is not None:
+        blocks += [Block("subheading", "Next steps"), Block("bullets", items=brief["next_steps"])]
 
     blocks.append(Block("heading", "Appendix"))
-    blocks += _appendix_blocks(ctx, insight)
+    blocks += _appendix_blocks(facts, ctx, insight)
+    blocks += _sources_blocks(facts)  # last: it lists every number printed above
     return blocks
 
 
-def _model_blocks(training: Any, charts: dict[str, str]) -> list[Block]:
+def _brief(facts: FactsRegistry, insight: DecisionInsight | None) -> dict[str, Any] | None:
+    """The decision brief with its numbers filled in from this registry (so each one is listed with its key).
+    A brief stored without placeholders (or with keys this registry lacks) is shown as stored, its numbers
+    registered as coming from the brief."""
+    if insight is None:
+        return None
+    templates = insight.placeholder_text or {}
+    brief: dict[str, Any] = {}
+    for name in BRIEF_FIELDS:
+        stored = getattr(insight, name)
+        try:
+            if name not in templates:
+                raise UnknownFactKey(name)
+            brief[name] = _each(templates[name], lambda text, _: facts.render(text))
+        except UnknownFactKey:
+            brief[name] = _each(stored, lambda text, i, name=name: facts.note(f"brief.{name}[{i}]", text,
+                                                                               "decision brief (state.json)"))
+    return brief
+
+
+def _each(value: str | list[str], function: Callable[[str, int], str]) -> str | list[str]:
+    return function(value, 0) if isinstance(value, str) else [function(item, i) for i, item in enumerate(value)]
+
+
+def _data_blocks(facts: FactsRegistry, profile: Any) -> list[Block]:
+    d = facts.display
+    blocks = [Block("paragraph", f"{d('data.n_rows')} rows and {d('data.n_cols')} columns; "
+                                 f"{d('data.duplicate_rows')} duplicate rows; {d('data.memory_mb')} MB in memory.")]
+    rows = [["Column", "Type", "Missing %", "Distinct"]] + [
+        [d(f"data.columns[{i}].name"), c.semantic_type, d(f"data.columns[{i}].missing_pct"), d(f"data.columns[{i}].n_unique")]
+        for i, c in enumerate(profile.columns[:MAX_PROFILE_ROWS])]
+    blocks.append(Block("table", rows=rows))
+    warnings = [d(f"data.warnings[{i}]") for i in range(len(profile.warnings))]
+    blocks += [Block("subheading", "Data-quality warnings"), Block("bullets", items=warnings or ["No data-quality warnings."])]
+    flagged = [warning for warning in warnings if warning.startswith(INJECTION_WARNING)]
+    blocks += [Block("subheading", "Security checks"), Block("bullets", items=[
+        *(flagged or ["No prompt-injection text was found in the column names or values."]),
+        "Column names, values and other dataset text were sent to the LLM only as untrusted data inside "
+        "<data> blocks, and no raw rows were sent.",
+    ])]
+    return blocks
+
+
+def _model_blocks(facts: FactsRegistry, training: Any, charts: dict[str, str]) -> list[Block]:
+    d = facts.display
     metric = training.primary_metric
-    score = training.test_metrics.get(metric)
-    text = (f"Best model: {training.best_model}. Primary metric: {metric} "
-            f"({'higher' if training.direction == 'maximize' else 'lower'} is better) = {_fmt(score)} on the held-out "
-            f"test split ({training.test_metrics.get('n_test_rows', '-')} rows, evaluated once).")
-    if training.baseline is not None and metric in training.baseline.metrics:
-        text += f" A simple {training.baseline.name} baseline scores {_fmt(training.baseline.metrics[metric])}."
+    text = (f"Best model: {d('model.name')}. Primary metric: {d('model.primary_metric')} "
+            f"({'higher' if training.direction == 'maximize' else 'lower'} is better) = {d(f'metrics.test.{metric}')} "
+            f"on the held-out test split ({d('metrics.test.n_test_rows')} rows, evaluated once).")
+    if f"baseline.{metric}" in facts:
+        text += f" A simple {d('baseline.name')} baseline scores {d(f'baseline.{metric}')}."
     blocks = [Block("paragraph", text)]
-    if training.decision_threshold is not None:
-        default = training.test_metrics_default_threshold
-        blocks.append(Block("paragraph", f"Decision threshold tuned on the validation split: {training.decision_threshold:.2f} "
-                                         "(instead of the default 0.50)."))
-        shared = [m for m in ("f1", "precision", "recall", "accuracy") if m in training.test_metrics and m in default]
-        blocks.append(Block("table", rows=[["Metric", "At 0.50", f"At {training.decision_threshold:.2f}"]] + [
-            [m, _fmt(default[m]), _fmt(training.test_metrics[m])] for m in shared]))
-    metrics = [[k, _fmt(v)] for k, v in training.test_metrics.items()
-               if isinstance(v, (int, float)) and not isinstance(v, bool) and k != "n_test_rows"]
+    if "threshold.tuned" in facts:
+        tuned, default = d("threshold.tuned", "f2"), d("threshold_default.value", "f2")
+        blocks.append(Block("paragraph", f"Decision threshold tuned on the validation split: {tuned} "
+                                         f"(instead of the default {default})."))
+        at_default = training.test_metrics_default_threshold
+        shared = [m for m in ("f1", "precision", "recall", "accuracy") if m in training.test_metrics and m in at_default]
+        blocks.append(Block("table", rows=[["Metric", f"At {default}", f"At {tuned}"]] + [
+            [m, d(f"metrics.test_at_default_threshold.{m}"), d(f"metrics.test.{m}")] for m in shared]))
+    metrics = [[name, d(f"metrics.test.{name}")] for name, value in training.test_metrics.items()
+               if isinstance(value, (int, float)) and not isinstance(value, bool) and name != "n_test_rows"]
     if metrics:
         blocks += [Block("subheading", "Test metrics"), Block("table", rows=[["Metric", "Value"]] + metrics)]
-    leaderboard = [e for e in training.leaderboard if e.rank is not None][:MAX_LEADERBOARD_ROWS]
-    if leaderboard:
+    ranked = [e for e in training.leaderboard if e.rank is not None][:MAX_LEADERBOARD_ROWS]
+    if ranked:
         blocks += [Block("subheading", f"Leaderboard (validation {metric})"), Block("table", rows=[
             ["Rank", "Model", "Valid score", "Inference ms/row", "Constraint issues"]] + [
-            [str(e.rank), e.model + (" (selected)" if e.selected else ""), _fmt(e.valid_score),
-             _fmt(e.inference_ms_per_row), "; ".join(e.violations) or "-"] for e in leaderboard])]
+            [d(f"leaderboard[{i}].rank"), d(f"leaderboard[{i}].model") + (" (selected)" if e.selected else ""),
+             d(f"leaderboard[{i}].valid_score"), d(f"leaderboard[{i}].inference_ms_per_row"),
+             d(f"leaderboard[{i}].violations") if e.violations else MISSING] for i, e in enumerate(ranked)])]
     for name in ("confusion_matrix", "actual_vs_pred", "forecast"):
         if _chart(charts, name):
             blocks.append(Block("image", path=charts[name]))
     return blocks
 
 
-def _driver_blocks(ctx: "RunContext", charts: dict[str, str]) -> list[Block]:
+def _driver_blocks(facts: FactsRegistry, ctx: "RunContext", charts: dict[str, str]) -> list[Block]:
+    d = facts.display
     explanation = ctx.explanation
     if explanation is None:
         return [Block("paragraph", "No explanation was computed.")]
-    global_explanation = explanation.global_explanation
-    blocks = [Block("paragraph", f"Method: {global_explanation.method.replace('_', ' ')}; explains the "
-                                 f"{global_explanation.output}; {global_explanation.n_samples:,} rows analysed.")]
+    explained = explanation.global_explanation
+    blocks = [Block("paragraph", f"Method: {explained.method.replace('_', ' ')}; explains the "
+                                 f"{d('explanation.output')}; {d('explanation.n_samples')} rows analysed.")]
     if _chart(charts, "feature_importance"):
         blocks.append(Block("image", path=charts["feature_importance"]))
-    if global_explanation.features:
+    if explained.features:
         blocks.append(Block("table", rows=[["Feature", "Share", "Direction", "Detail"]] + [
-            [f.feature, f"{f.share:.1%}", f.direction, f.detail or "-"] for f in global_explanation.features[:MAX_DRIVER_ROWS]]))
+            [d(f"drivers[{i}].feature"), d(f"drivers[{i}].share"), f.direction,
+             d(f"drivers[{i}].detail") if f.detail else MISSING] for i, f in enumerate(explained.features[:MAX_DRIVER_ROWS])]))
     if _chart(charts, "shap_summary"):
         blocks.append(Block("image", path=charts["shap_summary"]))
-    if global_explanation.notes:
-        blocks.append(Block("bullets", items=global_explanation.notes))
+    if explained.notes:
+        blocks.append(Block("bullets", items=[d(f"explanation.notes[{i}]") for i in range(len(explained.notes))]))
     recommendations = ctx.recommendations
     if recommendations is not None and recommendations.risk_tiers:
         blocks.append(Block("subheading", "Risk tiers"))
-        cutoffs = recommendations.tier_cutoffs
-        if cutoffs is not None:
+        if recommendations.tier_cutoffs is not None:
+            high, medium = d("risk_tiers.cutoffs.high", "f2"), d("risk_tiers.cutoffs.medium", "f2")
             blocks.append(Block("paragraph", (
-                f"High: probability >= {cutoffs.high:.2f}, the larger of the decision threshold ({cutoffs.medium:.2f}) "
-                f"and the {cutoffs.percentile}th percentile of predicted probabilities ({cutoffs.percentile_value:.2f}). "
-                f"Medium: {cutoffs.medium:.2f} <= probability < {cutoffs.high:.2f}. Low: probability < {cutoffs.medium:.2f}.")))
-        blocks += [Block("table", rows=[
-            ["Tier", "Probability range", "Records", "Share", "Top drivers"]] + [
-            [t.name, f"{t.min_probability:.2f} - {t.max_probability:.2f}", f"{t.count:,}", f"{t.share:.1%}",
-             ", ".join(t.top_drivers) or "-"] for t in recommendations.risk_tiers])]
+                f"High: probability >= {high}, the larger of the decision threshold ({medium}) and the "
+                f"{d('risk_tiers.cutoffs.percentile')}th percentile of predicted probabilities "
+                f"({d('risk_tiers.cutoffs.percentile_value', 'f2')}). Medium: {medium} <= probability < {high}. "
+                f"Low: probability < {medium}.")))
+        rows = [["Tier", "Probability range", "Records", "Share", "Top drivers"]]
+        for tier in recommendations.risk_tiers:
+            key = f"risk_tiers.{tier.name.lower()}"
+            drivers = ", ".join(d(f"{key}.top_drivers[{j}]") for j in range(len(tier.top_drivers))) or MISSING
+            rows.append([tier.name, f"{d(f'{key}.min_probability', 'f2')} - {d(f'{key}.max_probability', 'f2')}",
+                         d(f"{key}.count"), d(f"{key}.share"), drivers])
+        blocks.append(Block("table", rows=rows))
     if explanation.clusters:
         if _chart(charts, "cluster_sizes"):
             blocks.append(Block("image", path=charts["cluster_sizes"]))
         blocks += [Block("subheading", "Segments"), Block("table", rows=[["Segment", "Records", "Share", "What sets it apart"]] + [
-            [str(c.cluster), f"{c.size:,}", f"{c.share:.1%}", "; ".join(c.distinguishing) or "-"] for c in explanation.clusters])]
+            [d(f"clusters[{i}].id"), d(f"clusters[{i}].size"), d(f"clusters[{i}].share"),
+             "; ".join(d(f"clusters[{i}].distinguishing[{j}]") for j in range(len(c.distinguishing))) or MISSING]
+            for i, c in enumerate(explanation.clusters)])]
     if explanation.forecast is not None:
         forecast = explanation.forecast
-        blocks += [Block("subheading", f"Forecast (next {forecast.horizon} periods)"), Block("table", rows=[
+        blocks += [Block("subheading", f"Forecast (next {d('forecast.horizon')} periods)"), Block("table", rows=[
             ["Date", "Forecast", "Lower", "Upper"]] + [
-            [p.timestamp, _fmt(p.prediction), _fmt(p.lower), _fmt(p.upper)] for p in forecast.points[:MAX_FORECAST_ROWS]]),
-            Block("bullets", items=[forecast.interval, *forecast.assumptions])]
-    for local in explanation.local_examples[:1]:
-        if local.contributions:
-            blocks += [Block("subheading", f"Example: why one record got {_fmt(local.prediction)}"), Block("table", rows=[
-                ["Feature", "Value", "Effect"]] + [[c.feature, _fmt(c.value), f"{c.impact:+.4g}"] for c in local.contributions])]
+            [d(f"forecast.points[{i}].timestamp"), d(f"forecast.points[{i}].prediction"), d(f"forecast.points[{i}].lower"),
+             d(f"forecast.points[{i}].upper")] for i in range(min(MAX_FORECAST_ROWS, len(forecast.points)))]),
+            Block("bullets", items=[d("forecast.interval"),
+                                    *(d(f"forecast.assumptions[{j}]") for j in range(len(forecast.assumptions)))])]
+    if explanation.local_examples and explanation.local_examples[0].contributions:
+        local = explanation.local_examples[0]
+        blocks += [Block("subheading", f"Example: why one record got {d('explanation.example.prediction')}"),
+                   Block("table", rows=[["Feature", "Value", "Effect"]] + [
+                       [d(f"explanation.example.contributions[{i}].feature"), d(f"explanation.example.contributions[{i}].value"),
+                        d(f"explanation.example.contributions[{i}].impact")] for i in range(len(local.contributions))])]
     return blocks
 
 
-def _appendix_blocks(ctx: "RunContext", insight: DecisionInsight | None) -> list[Block]:
+def _appendix_blocks(facts: FactsRegistry, ctx: "RunContext", insight: DecisionInsight | None) -> list[Block]:
+    d = facts.display
     rows = [["Setting", "Value"]]
-    plan = ctx.plan
-    if plan is not None:
-        rows += [["Plan source", plan.source], ["Candidates", ", ".join(c.name for c in plan.candidates[: plan.budget.max_candidates])],
-                 ["Budget", f"{plan.budget_mode}: {plan.budget.max_candidates} models x {plan.budget.n_trials_per_model} trials, "
-                            f"{plan.budget.total_timeout_s:g}s total"], ["Primary metric", plan.primary_metric]]
+    if ctx.plan is not None:
+        rows += [["Plan source", d("plan.source")], ["Candidates", d("plan.candidates")],
+                 ["Budget", f"{d('plan.budget_mode')}: {d('plan.max_candidates')} models x {d('plan.n_trials_per_model')} "
+                            f"trials, {d('plan.total_timeout_s')} total"], ["Primary metric", d("plan.primary_metric")]]
     if ctx.requirement is not None:
-        rows.append(["Constraints", "; ".join(ctx.requirement.problem.constraints) or "none"])
+        constraints = [d(f"requirement.constraints[{i}]") for i in range(len(ctx.requirement.problem.constraints))]
+        rows.append(["Constraints", "; ".join(constraints) or "none"])
     if ctx.training is not None:
-        rows.append(["Training time", f"{ctx.training.total_time_s:.1f}s"])
-    rows.append(["Re-plans after verification", str(ctx.plan_revision_count)])
+        rows.append(["Training time", d("training.total_time_s")])
+    rows.append(["Re-plans after verification", d("run.plan_revisions")])
     if insight is not None:
         grounding = insight.grounding
-        rows.append(["Brief written by", "LLM (grounding check passed)" if insight.generated_by == "llm"
-                     else "template" + (" (LLM draft failed the grounding check)" if grounding and grounding.unsupported_numbers else "")])
+        failed = grounding is not None and bool(grounding.unsupported_numbers or grounding.unknown_keys)
+        rows.append(["Brief written by", "LLM (number checks passed)" if insight.generated_by == "llm"
+                     else "template" + (" (LLM draft failed the number checks)" if failed else "")])
     blocks = [Block("table", rows=rows)]
     knowledge = ctx.knowledge
     if knowledge is not None and knowledge.sources:
-        blocks += [Block("subheading", "Knowledge sources"), Block("bullets", items=knowledge.sources)]
+        blocks += [Block("subheading", "Knowledge sources"),
+                   Block("bullets", items=[d(f"knowledge.sources[{i}]") for i in range(len(knowledge.sources))])]
+    return blocks
+
+
+def _sources_blocks(facts: FactsRegistry) -> list[Block]:
+    used = facts.used()
+    blocks = [Block("subheading", SOURCES_HEADING), Block("paragraph", (
+        "Every number in this report, with the key it was looked up by and the file it comes from. Numbers in the "
+        "decision brief were written as placeholders and filled in by code; none was typed by the language model."))]
+    if used:
+        blocks.append(Block("table", rows=[["Number", "Key", "Source"]] + [[f.display, f.key, f.source] for f in used]))
     return blocks
 
 
@@ -347,13 +434,3 @@ def _md_cell(value: Any) -> str:
 
 def _chart(charts: dict[str, str], name: str) -> bool:
     return bool(charts.get(name)) and Path(charts[name]).is_file()
-
-
-def _fmt(value: Any) -> str:
-    if value is None:
-        return "-"
-    if isinstance(value, float):
-        return f"{value:,.4g}"
-    if isinstance(value, int) and not isinstance(value, bool):
-        return f"{value:,}"
-    return str(value)

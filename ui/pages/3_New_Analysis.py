@@ -8,6 +8,7 @@ from ui import embedded_api
 embedded_api.ensure_backend()  # IDSS_EMBEDDED_API=1: start the in-process API once (no-op otherwise)
 
 QUESTION_KEY = "new_question"
+MAX_ACTIONABLE = 20  # the API's limit (MAX_ACTIONABLE_FEATURES of the plan contract); ui/ never imports idss
 EXAMPLES: dict[str, str] = {
     "Customer churn": common.DEMO_QUESTION,
     "Crop price": "Predict the crop price from weather, soil and yield data, and tell me which factors matter most.",
@@ -61,7 +62,7 @@ with right:
     candidates = [c["name"] for c in profile.get("columns", [])
                   if c["name"] != target and c.get("semantic_type") not in ("id", "text")]
     actionable = st.multiselect(
-        "Actionable features (optional)", candidates, key="new_actionable",
+        "Actionable features (optional)", candidates, key="new_actionable", max_selections=MAX_ACTIONABLE,
         help="Columns your business can actually change, such as price or contract type. "
              "Recommendations and what-if levers focus on these. Leave empty to let IDSS infer them.")
 

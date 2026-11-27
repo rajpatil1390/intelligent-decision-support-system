@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from idss.core.llm_client import LLMClient
 from idss.core.logger import get_logger
 from idss.core.prompts import format_profile, render_prompt
+from idss.core.sanitize import MAX_TEXT_CHARS, clean, data_block
 from idss.core.schemas import KnowledgeBrief, KnowledgeChunk, DatasetProfile, UserRequirement
 from idss.knowledge.retriever import retrieve
 from idss.knowledge.vector_store import KnowledgeIndex
@@ -19,6 +20,7 @@ logger = get_logger()
 
 MAX_INSIGHTS = 6
 FALLBACK_INSIGHT_CHARS = 300
+MAX_NOTE_CHARS = 1_500  # per retrieved passage in the prompt
 SMALL_DATA_ROWS = 1_000
 LARGE_DATA_ROWS = 200_000
 
@@ -46,9 +48,12 @@ class KnowledgeAgent:
             try:
                 messages = render_prompt(
                     "knowledge_brief",
-                    requirement_summary=_requirement_summary(requirement),
+                    requirement_summary=data_block("\n".join(clean(line, MAX_TEXT_CHARS)
+                                                             for line in _requirement_summary(requirement).splitlines())),
                     dataset_context=format_profile(profile),
-                    notes="\n\n".join(f"[{chunk.source}] {chunk.text}" for chunk in chunks),
+                    # Retrieved passages (web results included) are untrusted text too.
+                    notes=data_block("\n\n".join(f"[{clean(chunk.source)}] {clean(chunk.text, MAX_NOTE_CHARS)}"
+                                                 for chunk in chunks)),
                 )
                 result = self.llm_client.chat_structured(messages, BriefInsights)
                 insights = [text.strip() for text in result.insights if text.strip()][:MAX_INSIGHTS]

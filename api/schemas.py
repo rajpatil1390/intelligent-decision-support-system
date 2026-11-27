@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from idss.core.plan_contract import MAX_ACTIONABLE_FEATURES
 from idss.core.schemas import (
     BudgetMode,
     ClusterProfile,
@@ -96,8 +97,8 @@ class RunCreate(_Request):
     dataset_id: str = Field(min_length=1, max_length=64)
     question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS)
     mode: BudgetMode = "fast"
-    actionable_features: list[str] | None = Field(default=None, max_length=200,
-                                                  description="Columns the business can change.")
+    actionable_features: list[str] | None = Field(default=None, max_length=MAX_ACTIONABLE_FEATURES,
+                                                  description="Columns the business can change (existing, non-ID).")
 
 
 class RunCreated(BaseModel):
@@ -140,6 +141,9 @@ class RunDetail(RunSummary):
     pending_questions: list[str] = Field(default_factory=list)
     answers: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
+    plan_source: str | None = Field(default=None, description="llm, default or fallback, once a plan is validated.")
+    plan_fallback: bool = Field(default=False, description="The proposed plan was rejected; a fallback plan was used.")
+    plan_rejections: list[str] = Field(default_factory=list, description="Why the proposed plan was rejected.")
     events: list[RunEventOut] = Field(default_factory=list)
 
 

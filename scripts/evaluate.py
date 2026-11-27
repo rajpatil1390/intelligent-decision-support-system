@@ -55,11 +55,11 @@ from idss.agents.model_agent import ModelAgent  # noqa: E402
 from idss.agents.requirement_agent import RequirementAgent, requirement_from_profile  # noqa: E402
 from idss.agents.verifier import BOUNDED_METRICS  # noqa: E402
 from idss.core.logger import get_logger, setup_logging  # noqa: E402
+from idss.core.plan_contract import PlanProposal  # noqa: E402
 from idss.core.schemas import (  # noqa: E402
     BUDGET_PRESETS,
     DatasetProfile,
     DatasetSpec,
-    ModelPlan,
     ProblemSpec,
     TaskType,
     TrainingResult,
@@ -279,12 +279,16 @@ PERTURB: dict[str, Callable[[pd.DataFrame, np.random.Generator, set[str]], pd.Da
 
 
 class SingleModelAgent:
-    """Plans only the top default model (LightGBM; k-means for clustering), fitted once with library defaults."""
+    """Proposes only the top default model (LightGBM; k-means for clustering), fitted once with library defaults.
+    The run's budget is SINGLE_MODEL_BUDGET (set on the Orchestrator); the plan validator checks both."""
 
-    def plan(self, requirement: UserRequirement, profile: DatasetProfile | None, **_: Any) -> ModelPlan:
-        plan = ModelAgent(None).plan(requirement, profile, budget_mode="fast")
-        budget = plan.budget.model_copy(update={"max_candidates": 1, "n_trials_per_model": 1})
-        return plan.model_copy(update={"candidates": plan.candidates[:1], "budget": budget})
+    def propose(self, requirement: UserRequirement, profile: DatasetProfile | None, **_: Any) -> PlanProposal:
+        proposal = ModelAgent(None).propose(requirement, profile, budget_mode="fast")
+        payload = proposal.payload | {"candidate_models": proposal.payload["candidate_models"][:1]}
+        return proposal.model_copy(update={"payload": payload})
+
+
+SINGLE_MODEL_BUDGET = BUDGET_PRESETS["fast"].model_copy(update={"max_candidates": 1, "n_trials_per_model": 1})
 
 
 def build_requirement(case: Case, profile: DatasetProfile) -> UserRequirement:
@@ -311,7 +315,8 @@ def run_case(case: Case, seed: int, variant: Variant, data_path: Path, requireme
     orchestrator.trainer = AutoMLTrainer(seed=seed, tune_hyperparameters=variant.tune_hyperparameters,
                                          tune_threshold=variant.tune_threshold, train_baselines=not variant.single_model)
     if variant.single_model:
-        orchestrator.model_agent = SingleModelAgent()  # duck-typed: the Orchestrator only calls plan()
+        orchestrator.model_agent = SingleModelAgent()  # duck-typed: the Orchestrator only calls propose()
+        orchestrator.budget = SINGLE_MODEL_BUDGET
     start = time.perf_counter()
     run_id = orchestrator.start(case.question, data_path, requirement=requirement)
     ctx = orchestrator.context

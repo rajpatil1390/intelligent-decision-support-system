@@ -124,7 +124,7 @@ def test_health_reports_llm_flag_but_never_the_key(env: Env, monkeypatch: pytest
     monkeypatch.setattr(settings, "llm_model", "test-model")
     response = env.client.get("/health")
     assert response.status_code == 200 and secret not in response.text and "sk-" not in response.text
-    assert response.json() == {"status": "ok", "llm_configured": True, "version": "1.0.0", "public_demo": False,
+    assert response.json() == {"status": "ok", "llm_configured": True, "version": "1.1.0", "public_demo": False,
                                "max_upload_mb": 50.0}
 
     monkeypatch.setattr(settings, "llm_api_key", SecretStr(""))

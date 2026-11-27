@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "IDSS: Intelligent Decision Support System Using Generative AI and Machine Learning"
 type: software
-version: 1.0.0
+version: 1.1.0
 license: MIT
 abstract: >-
   IDSS turns a business question in plain language and an uploaded table into a verified

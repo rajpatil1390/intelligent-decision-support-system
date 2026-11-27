@@ -4,13 +4,13 @@ Stage 1 (always, no LLM) runs deterministic checks and alone decides `passed`. S
 the LLM for a short verdict, concerns and recommendations; if it fails, it is skipped.
 """
 
-import json
 
 from pydantic import BaseModel, Field
 
 from idss.core.llm_client import LLMClient
 from idss.core.logger import get_logger
-from idss.core.prompts import render_prompt
+from idss.core.prompts import format_requirement, render_prompt
+from idss.core.sanitize import data_json
 from idss.core.schemas import Check, DatasetProfile, TrainingResult, UserRequirement, VerificationReport
 from idss.ml.evaluator import METRIC_FAMILY_BY_TASK, METRICS, metric_direction, normalize_metric_name
 
@@ -87,9 +87,9 @@ class Verifier:
         try:
             messages = render_prompt(
                 "verification_review",
-                requirement_json=requirement.model_dump_json(exclude={"system_notes"}, indent=2),
-                checks_json=json.dumps([c.model_dump() for c in checks], indent=2),
-                metrics_json=json.dumps(metrics, indent=2, default=str),
+                requirement_json=format_requirement(requirement),
+                checks_json=data_json([c.model_dump() for c in checks]),
+                metrics_json=data_json(metrics),
             )
             return self.llm_client.chat_structured(messages, LLMReview)
         except Exception as exc:  # the review is optional

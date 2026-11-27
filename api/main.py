@@ -68,9 +68,9 @@ from idss.storage.runs import ensure_workspace, run_dir
 logger = get_logger()
 
 API_TITLE = "IDSS API"
-API_VERSION = "1.0.0"
-MAX_UPLOAD_BYTES = 50 * 1024 * 1024
-PUBLIC_DEMO_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+API_VERSION = "1.1.0"
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # default of the MAX_UPLOAD_MB setting
+PUBLIC_DEMO_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # default of the PUBLIC_DEMO_MAX_UPLOAD_MB setting
 PUBLIC_DEMO_RETENTION = timedelta(hours=24)  # older runs (and uploads no run needs) are deleted at startup
 PUBLIC_DEMO_MAX_EXPLAIN_ROWS = 200  # SHAP sample in the public demo (default 500), to keep memory low
 MULTIPART_OVERHEAD_BYTES = 64 * 1024  # form boundaries and headers around the file in a multipart body
@@ -307,6 +307,13 @@ def create_run(body: RunCreate, config: ConfigDep, worker: WorkerDep) -> RunCrea
     if config.public_demo and body.mode != "fast":
         raise ApiError(403, "public_demo", "The public demo runs in fast mode only.")
     dataset = _dataset(body.dataset_id)
+    if body.actionable_features:  # user input: refuse it here rather than let the plan validator fall back
+        columns = {col.name: col for col in _dataset_profile(dataset).columns}
+        bad = [name for name in body.actionable_features if name.strip() and
+               (name.strip() not in columns or columns[name.strip()].semantic_type == "id")]
+        if bad:
+            raise ApiError(400, "invalid_actionable_features",
+                           f"Not usable as actionable features (unknown or identifier columns): {', '.join(bad)}.")
 
     def prepare() -> tuple[str, Callable[[], None]]:
         llm = config.llm_factory()
@@ -353,6 +360,9 @@ def get_run(run_id: str, worker: WorkerDep) -> RunDetail:
         decision_threshold=training.decision_threshold if training else None,
         verification=ctx.verification, pending_questions=ctx.pending_questions, answers=ctx.answers,
         errors=ctx.errors,
+        plan_source=ctx.validated_plan.source if ctx.validated_plan else None,
+        plan_fallback=bool(ctx.validated_plan and ctx.validated_plan.fallback),
+        plan_rejections=ctx.validated_plan.rejected_reasons if ctx.validated_plan else [],
         events=[RunEventOut(ts=e.timestamp, from_state=e.from_state, to_state=e.state, message=e.message)
                 for e in ctx.history],
     )
@@ -523,12 +533,16 @@ class UploadSizeLimit:
 
 
 def create_app(*, llm_factory: Callable[[], LLMClient | None] | None = None, budget: TrainingBudget | None = None,
-               max_upload_bytes: int = MAX_UPLOAD_BYTES, public_demo: bool | None = None) -> FastAPI:
+               max_upload_bytes: int | None = None, public_demo: bool | None = None) -> FastAPI:
     """Build the API. Tests inject a fake LLM factory, a tiny training budget or a small upload limit.
-    `public_demo` defaults to the IDSS_PUBLIC_DEMO setting; it caps uploads at 10 MB."""
-    demo = get_settings().public_demo if public_demo is None else public_demo
+    `max_upload_bytes` defaults to the MAX_UPLOAD_MB setting (50 MB, the same limit the plan validator applies);
+    `public_demo` defaults to the IDSS_PUBLIC_DEMO setting; it caps uploads at PUBLIC_DEMO_MAX_UPLOAD_MB (10 MB)."""
+    settings = get_settings()
+    demo = settings.public_demo if public_demo is None else public_demo
+    if max_upload_bytes is None:
+        max_upload_bytes = int(settings.max_upload_mb * 2**20)
     if demo:
-        max_upload_bytes = min(max_upload_bytes, PUBLIC_DEMO_MAX_UPLOAD_BYTES)
+        max_upload_bytes = min(max_upload_bytes, int(settings.public_demo_max_upload_mb * 2**20))
     config = ApiConfig(llm_factory=llm_factory or default_llm_factory, budget=budget, max_upload_bytes=max_upload_bytes,
                        public_demo=demo)
 

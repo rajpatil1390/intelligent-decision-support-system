@@ -31,6 +31,10 @@ def render_status(run: dict[str, Any]) -> None:
     col4.metric(f"Test {metric}" if metric else "Test score", common.fmt_num(value) if value is not None else "—")
     if run.get("active"):
         st.caption(f"⏳ Working… this page refreshes every {POLL_SECONDS} s.")
+    if run.get("plan_fallback"):
+        reasons = "\n".join(f"- {reason}" for reason in run.get("plan_rejections") or [])
+        st.warning("**The proposed analysis plan was rejected**, so a safe fallback plan built from the data profile "
+                   f"was used instead.\n\n{reasons}", icon=":material/gpp_maybe:")
     styles.section("Event timeline")
     ui.timeline(run.get("events") or [])
 

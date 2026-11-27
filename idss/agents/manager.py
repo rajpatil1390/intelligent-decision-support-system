@@ -5,9 +5,11 @@ work and returns (next_state, message). After every transition the whole RunCont
 workspace/runs/<run_id>/state.json, so a run survives restarts and can wait for the user's answers.
 Loops are bounded: at most `max_revisions` clarification rounds, `MAX_PLAN_REVISIONS` re-plans after a
 failed verification, and `MAX_STEPS` steps per call.
-PROFILE also builds a KnowledgeBrief; PLAN asks the ModelAgent which zoo models to train; TRAIN runs the
-AutoMLTrainer; VERIFY runs the Verifier; EXPLAIN computes drivers, recommendations and a what-if example;
-INSIGHT writes the grounded decision brief; REPORT saves report.pdf and report.md. `ask()` answers ad-hoc
+PROFILE also builds a KnowledgeBrief; PLAN asks the ModelAgent for a plan proposal and has it checked by the
+independent plan validator (a rejected proposal is replaced by a fallback plan built from the data profile, and
+the reasons are kept for the Run Monitor); TRAIN starts only from a ValidatedPlan sealed by that validator (the
+transition into TRAIN is refused otherwise) and runs the AutoMLTrainer; VERIFY runs the Verifier; EXPLAIN computes
+drivers, recommendations and a what-if example; INSIGHT writes the grounded decision brief; REPORT saves report.pdf and report.md. `ask()` answers ad-hoc
 questions through the sandboxed AnalysisAgent and `what_if()` simulates changes with the trained model.
 Every transition is also mirrored into the SQLite database (runs + events tables) for listing; a database
 problem is logged and never stops a run, because state.json is the source of truth.
@@ -23,15 +25,15 @@ from typing import Any
 
 import joblib
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from configs.settings import get_settings
 from idss.agents.analysis_agent import AnalysisAgent, AnalysisAnswer
 from idss.agents.data_agent import DataAgent, DataAgentResult
-from idss.agents.insight_agent import InsightAgent, build_facts
+from idss.agents.insight_agent import InsightAgent
 from idss.agents.knowledge_agent import KnowledgeAgent
 from idss.agents.model_agent import ModelAgent
-from idss.agents.requirement_agent import RequirementAgent
+from idss.agents.requirement_agent import RequirementAgent, align_requirement
 from idss.agents.verifier import Verifier
 from idss.core.llm_client import LLMClient
 from idss.core.logger import get_logger
@@ -52,9 +54,17 @@ from idss.core.schemas import (
     VerificationReport,
     WhatIfResult,
 )
+from idss.decision.facts import build_registry
 from idss.decision.recommender import example_what_if, recommend
 from idss.decision.report_builder import build_markdown, build_pdf
 from idss.decision.what_if import simulate, simulate_segment
+from idss.execution.plan_validator import (
+    PlanRejected,
+    PlanValidationError,
+    ValidatedPlan,
+    revalidate,
+    validate_or_fallback,
+)
 from idss.ml import model_zoo
 from idss.ml.data_loader import load_dataset
 from idss.ml.explain import explain_run
@@ -79,6 +89,10 @@ NOT_RELEVANT_MESSAGE = (
 )
 REPORT_PDF = "report.pdf"
 REPORT_MARKDOWN = "report.md"
+
+
+class PlanNotValidatedError(RuntimeError):
+    """TRAIN was asked to run without a plan accepted by the plan validator."""
 
 
 class RunState(StrEnum):
@@ -127,7 +141,9 @@ class RunContext(BaseModel):
     summary: str | None = None
     data: DataAgentResult | None = None
     knowledge: KnowledgeBrief | None = None
-    plan: ModelPlan | None = None
+    validated_plan: ValidatedPlan | None = Field(
+        default=None, description="The plan TRAIN runs: accepted by the plan validator, or its fallback plan."
+    )
     training: TrainingResult | None = None
     verification: VerificationReport | None = None
     explanation: ExplanationResult | None = None
@@ -147,6 +163,12 @@ class RunContext(BaseModel):
     message: str | None = Field(default=None, description="Final user-facing message.")
     created_at: datetime
     updated_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def plan(self) -> ModelPlan | None:
+        """The engine's ModelPlan of the validated plan (read-only: a plan can only be set through the validator)."""
+        return self.validated_plan.model_plan if self.validated_plan is not None else None
 
 
 Handler = Callable[[RunContext], tuple[RunState, str]]
@@ -396,21 +418,53 @@ class Orchestrator:
     def _handle_plan(self, ctx: RunContext) -> tuple[RunState, str]:
         revising = ctx.plan_revision_count > 0
         feedback = ctx.verification.recommendations if revising and ctx.verification else None
-        plan = self.model_agent.plan(
-            _required(ctx.requirement, "requirement"),
-            ctx.profile,
-            budget_mode=self._budget_mode(ctx, revising),
-            knowledge=ctx.knowledge,
-            feedback=feedback,
+        requirement, profile = _required(ctx.requirement, "requirement"), _required(ctx.profile, "profile")
+        proposal = self.model_agent.propose(
+            requirement, profile, budget_mode=self._budget_mode(ctx, revising), knowledge=ctx.knowledge, feedback=feedback
         )
-        if self.budget is not None:
-            plan = plan.model_copy(update={"budget": self.budget})
-        ctx.plan = plan
+        try:
+            validated = validate_or_fallback(proposal, load_dataset(ctx.data_path), profile, get_settings(),
+                                             **self._plan_options(ctx))
+        except PlanValidationError as exc:
+            ctx.message = f"Sorry, no safe analysis plan could be built for this data: {exc}"
+            ctx.errors.append(f"PLAN failed: no valid plan ({exc}).")
+            return RunState.FAILED, f"No valid plan could be built: {exc}"
+        ctx.validated_plan = validated
+        plan = validated.model_plan
         names = ", ".join(c.name for c in plan.candidates[: plan.budget.max_candidates])
-        return RunState.TRAIN, (
+        message = (
             f"{'Revised plan' if revising else 'Plan'} ({plan.source}): optimise {plan.primary_metric} with {names} "
             f"({plan.budget_mode} mode, {plan.budget.n_trials_per_model} trials each)."
         )
+        if validated.fallback:
+            ctx.requirement = align_requirement(requirement, validated.analysis.task_type, validated.analysis.target,
+                                                validated.analysis.actionable_features)
+            message = (f"Proposed plan rejected ({' '.join(validated.rejected_reasons)}) Using a fallback plan built "
+                       f"from the data profile: {plan.task_type} on '{plan.target}'. {message}")
+        return RunState.TRAIN, message
+
+    def _plan_options(self, ctx: RunContext) -> dict[str, Any]:
+        """This orchestrator's inputs to the plan validator (the hard limits come from the settings)."""
+        return {"budget": self.budget, "public_demo": True if self.fast_only else None, "data_path": ctx.data_path}
+
+    def _train_refusal(self, ctx: RunContext) -> str | None:
+        """Why TRAIN may not start, or None. Only a ValidatedPlan sealed by the validator in this process passes
+        directly; any other ValidatedPlan (read back from state.json, built by hand, changed since) is validated
+        again against the data first."""
+        validated = ctx.validated_plan
+        if not isinstance(validated, ValidatedPlan):
+            return "Refused to start TRAIN: the run has no validated plan."
+        if validated.sealed:
+            return None
+        try:
+            result = revalidate(validated, load_dataset(ctx.data_path), _required(ctx.profile, "profile"),
+                                get_settings(), **self._plan_options(ctx))
+        except Exception as exc:  # the guard itself must never crash the state machine
+            return f"Refused to start TRAIN: the plan could not be validated ({type(exc).__name__}: {exc})."
+        if isinstance(result, PlanRejected):
+            return "Refused to start TRAIN: the stored plan failed validation: " + " ".join(result.reasons)
+        ctx.validated_plan = result
+        return None
 
     def _budget_mode(self, ctx: RunContext, revising: bool) -> BudgetMode | None:
         if self.fast_only:
@@ -418,13 +472,15 @@ class Orchestrator:
         return "full" if revising else (ctx.budget_mode or self.budget_mode)
 
     def _handle_train(self, ctx: RunContext) -> tuple[RunState, str]:
-        plan = _required(ctx.plan, "plan")
+        if refusal := self._train_refusal(ctx):  # e.g. a run resumed in TRAIN from a tampered state.json
+            raise PlanNotValidatedError(refusal)
+        validated = _required(ctx.validated_plan, "validated plan")
         result = self.trainer.run(
             load_dataset(ctx.data_path),
             _required(ctx.requirement, "requirement"),
             _required(ctx.profile, "profile"),
             run_dir(ctx.run_id, self.run_dir_root),
-            plan=plan,
+            plan=validated.model_plan,
         )
         ctx.training = result
         trained = sum(1 for entry in result.leaderboard if entry.status == "ok")
@@ -469,12 +525,9 @@ class Orchestrator:
         )
 
     def _handle_insight(self, ctx: RunContext) -> tuple[RunState, str]:
-        facts = build_facts(
-            _required(ctx.requirement, "requirement"), _required(ctx.training, "training"), ctx.explanation,
-            ctx.recommendations, ctx.verification, ctx.knowledge, ctx.what_if_example,
-            ctx.profile.warnings if ctx.profile else [],
-        )
-        ctx.insight = self.insight_agent.generate(facts)
+        _required(ctx.requirement, "requirement")
+        _required(ctx.training, "training")
+        ctx.insight = self.insight_agent.generate(build_registry(ctx))  # numbers only through registry placeholders
         grounding = ctx.insight.grounding
         detail = "" if grounding is None else f" (grounding {'passed' if grounding.passed else 'failed'})"
         return RunState.REPORT, f"Decision brief written by {ctx.insight.generated_by}{detail}."
@@ -504,6 +557,11 @@ class Orchestrator:
         return self.resume(run_id)
 
     def _transition(self, ctx: RunContext, state: RunState, message: str) -> None:
+        if state == RunState.TRAIN and (refusal := self._train_refusal(ctx)):
+            logger.error("Run {}: {}", ctx.run_id, refusal)
+            ctx.errors.append(refusal)
+            ctx.message = "Sorry, the run stopped: training may only start from a validated plan."
+            state, message = RunState.FAILED, refusal
         now = datetime.now(UTC)
         ctx.history.append(RunEvent(timestamp=now, from_state=ctx.state, state=state, message=message))
         ctx.state = state

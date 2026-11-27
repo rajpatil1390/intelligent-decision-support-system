@@ -1,0 +1,1919 @@
+{
+  "generated": "2026-11-27 13:16",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "budget": {
+    "max_candidates": 3,
+    "n_trials_per_model": 15,
+    "timeout_per_model_s": 60.0,
+    "total_timeout_s": 180.0
+  },
+  "environment": {
+    "python": "3.12.0",
+    "os": "Windows 11",
+    "cpus": 16,
+    "packages": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "lightgbm": "4.7.0",
+      "optuna": "5.0.0",
+      "shap": "0.52.0",
+      "pandas": "3.0.6",
+      "numpy": "2.5.3"
+    }
+  },
+  "duration_s": 335.6,
+  "definitions": {
+    "spearman": "Spearman rank correlation between two seeds over the union of their top-10 drivers (ranks from each seed's full driver list; a missing feature shares the last rank)",
+    "top5_jaccard": "|A ∩ B| / |A ∪ B| of the two seeds' top-5 driver sets",
+    "pairs": "mean ± sample standard deviation over all seed pairs",
+    "what_if": "same change on the same base row (typical record of the at-risk class) under each seed's model; probability of the at-risk class before/after and the change, mean ± std over seeds"
+  },
+  "runs": [
+    {
+      "case": "Churn",
+      "seed": 42,
+      "task_type": "tabular_classification",
+      "n_classes": 2,
+      "best_model": "logistic_regression",
+      "method": "shap_linear",
+      "n_features": 10,
+      "ranking": [
+        "contract_type",
+        "tenure_months",
+        "payment_method",
+        "monthly_charges",
+        "support_calls",
+        "internet_service",
+        "region",
+        "senior_citizen",
+        "signup_date",
+        "total_charges"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "contract_type",
+          "share": 0.3375,
+          "importance": 1.075293,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "tenure_months",
+          "share": 0.1976,
+          "importance": 0.62963,
+          "direction": "decreases"
+        },
+        {
+          "rank": 3,
+          "feature": "payment_method",
+          "share": 0.1256,
+          "importance": 0.400249,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "monthly_charges",
+          "share": 0.0891,
+          "importance": 0.284017,
+          "direction": "increases"
+        },
+        {
+          "rank": 5,
+          "feature": "support_calls",
+          "share": 0.087,
+          "importance": 0.277147,
+          "direction": "increases"
+        },
+        {
+          "rank": 6,
+          "feature": "internet_service",
+          "share": 0.0585,
+          "importance": 0.18632,
+          "direction": "mixed"
+        },
+        {
+          "rank": 7,
+          "feature": "region",
+          "share": 0.0354,
+          "importance": 0.112676,
+          "direction": "mixed"
+        },
+        {
+          "rank": 8,
+          "feature": "senior_citizen",
+          "share": 0.0291,
+          "importance": 0.09284,
+          "direction": "mixed"
+        },
+        {
+          "rank": 9,
+          "feature": "signup_date",
+          "share": 0.0206,
+          "importance": 0.065528,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "total_charges",
+          "share": 0.0196,
+          "importance": 0.062387,
+          "direction": "decreases"
+        }
+      ],
+      "what_if": {
+        "class": "Yes",
+        "output": "probability that churn = 'Yes'",
+        "base_row": {
+          "signup_date": "2024-12-28",
+          "region": "West",
+          "contract_type": "Month-to-month",
+          "internet_service": "Fiber optic",
+          "payment_method": "Electronic check",
+          "senior_citizen": 0,
+          "tenure_months": 25,
+          "monthly_charges": 73.43,
+          "total_charges": 1521.565,
+          "support_calls": 1
+        },
+        "changes": {
+          "contract_type": "Two year"
+        },
+        "change_label": "contract_type → 'Two year'",
+        "before": 0.7479923386957348,
+        "after": 0.21694558376699755,
+        "delta": -0.5310467549287372,
+        "warnings": []
+      },
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 17.6
+    },
+    {
+      "case": "Churn",
+      "seed": 43,
+      "task_type": "tabular_classification",
+      "n_classes": 2,
+      "best_model": "logistic_regression",
+      "method": "shap_linear",
+      "n_features": 10,
+      "ranking": [
+        "contract_type",
+        "tenure_months",
+        "payment_method",
+        "monthly_charges",
+        "support_calls",
+        "internet_service",
+        "region",
+        "total_charges",
+        "senior_citizen",
+        "signup_date"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "contract_type",
+          "share": 0.3302,
+          "importance": 1.04988,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "tenure_months",
+          "share": 0.1839,
+          "importance": 0.584836,
+          "direction": "decreases"
+        },
+        {
+          "rank": 3,
+          "feature": "payment_method",
+          "share": 0.1194,
+          "importance": 0.379553,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "monthly_charges",
+          "share": 0.1076,
+          "importance": 0.342267,
+          "direction": "increases"
+        },
+        {
+          "rank": 5,
+          "feature": "support_calls",
+          "share": 0.0848,
+          "importance": 0.269679,
+          "direction": "increases"
+        },
+        {
+          "rank": 6,
+          "feature": "internet_service",
+          "share": 0.0446,
+          "importance": 0.141902,
+          "direction": "mixed"
+        },
+        {
+          "rank": 7,
+          "feature": "region",
+          "share": 0.0439,
+          "importance": 0.13958,
+          "direction": "mixed"
+        },
+        {
+          "rank": 8,
+          "feature": "total_charges",
+          "share": 0.0372,
+          "importance": 0.118402,
+          "direction": "decreases"
+        },
+        {
+          "rank": 9,
+          "feature": "senior_citizen",
+          "share": 0.0263,
+          "importance": 0.083756,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "signup_date",
+          "share": 0.0219,
+          "importance": 0.069597,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": {
+        "class": "Yes",
+        "output": "probability that churn = 'Yes'",
+        "base_row": {
+          "signup_date": "2024-12-28",
+          "region": "West",
+          "contract_type": "Month-to-month",
+          "internet_service": "Fiber optic",
+          "payment_method": "Electronic check",
+          "senior_citizen": 0,
+          "tenure_months": 25,
+          "monthly_charges": 73.43,
+          "total_charges": 1521.565,
+          "support_calls": 1
+        },
+        "changes": {
+          "contract_type": "Two year"
+        },
+        "change_label": "contract_type → 'Two year'",
+        "before": 0.7365588358963991,
+        "after": 0.21241656323354285,
+        "delta": -0.5241422726628563,
+        "warnings": []
+      },
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 16.59
+    },
+    {
+      "case": "Churn",
+      "seed": 44,
+      "task_type": "tabular_classification",
+      "n_classes": 2,
+      "best_model": "logistic_regression",
+      "method": "shap_linear",
+      "n_features": 10,
+      "ranking": [
+        "contract_type",
+        "tenure_months",
+        "payment_method",
+        "monthly_charges",
+        "support_calls",
+        "internet_service",
+        "total_charges",
+        "region",
+        "senior_citizen",
+        "signup_date"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "contract_type",
+          "share": 0.3326,
+          "importance": 1.040079,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "tenure_months",
+          "share": 0.1717,
+          "importance": 0.53689,
+          "direction": "decreases"
+        },
+        {
+          "rank": 3,
+          "feature": "payment_method",
+          "share": 0.1174,
+          "importance": 0.367303,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "monthly_charges",
+          "share": 0.1057,
+          "importance": 0.330633,
+          "direction": "increases"
+        },
+        {
+          "rank": 5,
+          "feature": "support_calls",
+          "share": 0.0862,
+          "importance": 0.269509,
+          "direction": "increases"
+        },
+        {
+          "rank": 6,
+          "feature": "internet_service",
+          "share": 0.0601,
+          "importance": 0.188098,
+          "direction": "mixed"
+        },
+        {
+          "rank": 7,
+          "feature": "total_charges",
+          "share": 0.0478,
+          "importance": 0.149519,
+          "direction": "decreases"
+        },
+        {
+          "rank": 8,
+          "feature": "region",
+          "share": 0.034,
+          "importance": 0.106302,
+          "direction": "mixed"
+        },
+        {
+          "rank": 9,
+          "feature": "senior_citizen",
+          "share": 0.0277,
+          "importance": 0.086556,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "signup_date",
+          "share": 0.0168,
+          "importance": 0.052508,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": {
+        "class": "Yes",
+        "output": "probability that churn = 'Yes'",
+        "base_row": {
+          "signup_date": "2024-12-28",
+          "region": "West",
+          "contract_type": "Month-to-month",
+          "internet_service": "Fiber optic",
+          "payment_method": "Electronic check",
+          "senior_citizen": 0,
+          "tenure_months": 25,
+          "monthly_charges": 73.43,
+          "total_charges": 1521.565,
+          "support_calls": 1
+        },
+        "changes": {
+          "contract_type": "Two year"
+        },
+        "change_label": "contract_type → 'Two year'",
+        "before": 0.7278851878660242,
+        "after": 0.20215617824831508,
+        "delta": -0.5257290096177091,
+        "warnings": []
+      },
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 23.82
+    },
+    {
+      "case": "Crop price",
+      "seed": 42,
+      "task_type": "tabular_regression",
+      "n_classes": null,
+      "best_model": "lightgbm",
+      "method": "shap_tree",
+      "n_features": 10,
+      "ranking": [
+        "yield_t_per_ha",
+        "crop",
+        "year",
+        "season",
+        "state",
+        "temperature_c",
+        "rainfall_mm",
+        "humidity_pct",
+        "fertilizer_kg_per_ha",
+        "soil_ph"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "yield_t_per_ha",
+          "share": 0.3873,
+          "importance": 1450.25025,
+          "direction": "decreases"
+        },
+        {
+          "rank": 2,
+          "feature": "crop",
+          "share": 0.2164,
+          "importance": 810.456114,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "year",
+          "share": 0.1534,
+          "importance": 574.488676,
+          "direction": "increases"
+        },
+        {
+          "rank": 4,
+          "feature": "season",
+          "share": 0.1194,
+          "importance": 446.947062,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "state",
+          "share": 0.0427,
+          "importance": 159.976507,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "temperature_c",
+          "share": 0.0295,
+          "importance": 110.512418,
+          "direction": "increases"
+        },
+        {
+          "rank": 7,
+          "feature": "rainfall_mm",
+          "share": 0.0254,
+          "importance": 95.125305,
+          "direction": "decreases"
+        },
+        {
+          "rank": 8,
+          "feature": "humidity_pct",
+          "share": 0.0094,
+          "importance": 35.155924,
+          "direction": "decreases"
+        },
+        {
+          "rank": 9,
+          "feature": "fertilizer_kg_per_ha",
+          "share": 0.0083,
+          "importance": 31.170363,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "soil_ph",
+          "share": 0.0082,
+          "importance": 30.609325,
+          "direction": "increases"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 9.53
+    },
+    {
+      "case": "Crop price",
+      "seed": 43,
+      "task_type": "tabular_regression",
+      "n_classes": null,
+      "best_model": "lightgbm",
+      "method": "shap_tree",
+      "n_features": 10,
+      "ranking": [
+        "crop",
+        "yield_t_per_ha",
+        "year",
+        "season",
+        "state",
+        "rainfall_mm",
+        "temperature_c",
+        "humidity_pct",
+        "soil_ph",
+        "fertilizer_kg_per_ha"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "crop",
+          "share": 0.3782,
+          "importance": 1368.231319,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "yield_t_per_ha",
+          "share": 0.2687,
+          "importance": 971.933321,
+          "direction": "decreases"
+        },
+        {
+          "rank": 3,
+          "feature": "year",
+          "share": 0.1566,
+          "importance": 566.529849,
+          "direction": "increases"
+        },
+        {
+          "rank": 4,
+          "feature": "season",
+          "share": 0.0835,
+          "importance": 302.090188,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "state",
+          "share": 0.0508,
+          "importance": 183.834414,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "rainfall_mm",
+          "share": 0.0311,
+          "importance": 112.548108,
+          "direction": "decreases"
+        },
+        {
+          "rank": 7,
+          "feature": "temperature_c",
+          "share": 0.01,
+          "importance": 36.294749,
+          "direction": "increases"
+        },
+        {
+          "rank": 8,
+          "feature": "humidity_pct",
+          "share": 0.0091,
+          "importance": 32.933597,
+          "direction": "decreases"
+        },
+        {
+          "rank": 9,
+          "feature": "soil_ph",
+          "share": 0.006,
+          "importance": 21.835168,
+          "direction": "increases"
+        },
+        {
+          "rank": 10,
+          "feature": "fertilizer_kg_per_ha",
+          "share": 0.0059,
+          "importance": 21.20273,
+          "direction": "increases"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 9.72
+    },
+    {
+      "case": "Crop price",
+      "seed": 44,
+      "task_type": "tabular_regression",
+      "n_classes": null,
+      "best_model": "lightgbm",
+      "method": "shap_tree",
+      "n_features": 10,
+      "ranking": [
+        "yield_t_per_ha",
+        "crop",
+        "year",
+        "season",
+        "state",
+        "rainfall_mm",
+        "temperature_c",
+        "humidity_pct",
+        "fertilizer_kg_per_ha",
+        "soil_ph"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "yield_t_per_ha",
+          "share": 0.3264,
+          "importance": 1153.750529,
+          "direction": "decreases"
+        },
+        {
+          "rank": 2,
+          "feature": "crop",
+          "share": 0.2751,
+          "importance": 972.400904,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "year",
+          "share": 0.1565,
+          "importance": 553.050618,
+          "direction": "increases"
+        },
+        {
+          "rank": 4,
+          "feature": "season",
+          "share": 0.1245,
+          "importance": 440.096987,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "state",
+          "share": 0.0462,
+          "importance": 163.339019,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "rainfall_mm",
+          "share": 0.03,
+          "importance": 105.879693,
+          "direction": "decreases"
+        },
+        {
+          "rank": 7,
+          "feature": "temperature_c",
+          "share": 0.0162,
+          "importance": 57.320709,
+          "direction": "increases"
+        },
+        {
+          "rank": 8,
+          "feature": "humidity_pct",
+          "share": 0.0095,
+          "importance": 33.602143,
+          "direction": "decreases"
+        },
+        {
+          "rank": 9,
+          "feature": "fertilizer_kg_per_ha",
+          "share": 0.0078,
+          "importance": 27.585714,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "soil_ph",
+          "share": 0.0078,
+          "importance": 27.534082,
+          "direction": "increases"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 8.91
+    },
+    {
+      "case": "Store sales",
+      "seed": 42,
+      "task_type": "time_series_forecasting",
+      "n_classes": null,
+      "best_model": "ridge",
+      "method": "shap_linear",
+      "n_features": 6,
+      "ranking": [
+        "date",
+        "day_of_week",
+        "is_promo",
+        "temperature_c",
+        "sales (history)",
+        "is_holiday"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "date",
+          "share": 0.8682,
+          "importance": 22056.270605,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "day_of_week",
+          "share": 0.0388,
+          "importance": 984.722755,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "is_promo",
+          "share": 0.0363,
+          "importance": 921.792187,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "temperature_c",
+          "share": 0.0276,
+          "importance": 700.22706,
+          "direction": "increases"
+        },
+        {
+          "rank": 5,
+          "feature": "sales (history)",
+          "share": 0.0242,
+          "importance": 615.837587,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "is_holiday",
+          "share": 0.005,
+          "importance": 127.058183,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 5.42
+    },
+    {
+      "case": "Store sales",
+      "seed": 43,
+      "task_type": "time_series_forecasting",
+      "n_classes": null,
+      "best_model": "ridge",
+      "method": "shap_linear",
+      "n_features": 6,
+      "ranking": [
+        "date",
+        "day_of_week",
+        "is_promo",
+        "temperature_c",
+        "sales (history)",
+        "is_holiday"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "date",
+          "share": 0.8682,
+          "importance": 22056.44673,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "day_of_week",
+          "share": 0.0388,
+          "importance": 984.722779,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "is_promo",
+          "share": 0.0363,
+          "importance": 921.792187,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "temperature_c",
+          "share": 0.0276,
+          "importance": 700.226825,
+          "direction": "increases"
+        },
+        {
+          "rank": 5,
+          "feature": "sales (history)",
+          "share": 0.0242,
+          "importance": 615.837527,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "is_holiday",
+          "share": 0.005,
+          "importance": 127.058192,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 6.64
+    },
+    {
+      "case": "Store sales",
+      "seed": 44,
+      "task_type": "time_series_forecasting",
+      "n_classes": null,
+      "best_model": "ridge",
+      "method": "shap_linear",
+      "n_features": 6,
+      "ranking": [
+        "date",
+        "day_of_week",
+        "is_promo",
+        "temperature_c",
+        "sales (history)",
+        "is_holiday"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "date",
+          "share": 0.868,
+          "importance": 22031.296308,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "day_of_week",
+          "share": 0.0388,
+          "importance": 984.719406,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "is_promo",
+          "share": 0.0363,
+          "importance": 921.792179,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "temperature_c",
+          "share": 0.0276,
+          "importance": 700.260403,
+          "direction": "increases"
+        },
+        {
+          "rank": 5,
+          "feature": "sales (history)",
+          "share": 0.0243,
+          "importance": 615.846076,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "is_holiday",
+          "share": 0.005,
+          "importance": 127.056877,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 6.08
+    },
+    {
+      "case": "Delivery",
+      "seed": 42,
+      "task_type": "tabular_classification",
+      "n_classes": 3,
+      "best_model": "logistic_regression",
+      "method": "shap_linear",
+      "n_features": 10,
+      "ranking": [
+        "shipping_mode",
+        "distance_km",
+        "carrier",
+        "dispatch_delay_hours",
+        "peak_season",
+        "weather_alert",
+        "warehouse",
+        "package_weight_kg",
+        "order_date",
+        "items_count"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "shipping_mode",
+          "share": 0.2757,
+          "importance": 2.785316,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "distance_km",
+          "share": 0.1808,
+          "importance": 1.826306,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "carrier",
+          "share": 0.1706,
+          "importance": 1.723655,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "dispatch_delay_hours",
+          "share": 0.1505,
+          "importance": 1.520722,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "peak_season",
+          "share": 0.0873,
+          "importance": 0.881536,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "weather_alert",
+          "share": 0.0558,
+          "importance": 0.564209,
+          "direction": "mixed"
+        },
+        {
+          "rank": 7,
+          "feature": "warehouse",
+          "share": 0.03,
+          "importance": 0.303385,
+          "direction": "mixed"
+        },
+        {
+          "rank": 8,
+          "feature": "package_weight_kg",
+          "share": 0.0251,
+          "importance": 0.253435,
+          "direction": "mixed"
+        },
+        {
+          "rank": 9,
+          "feature": "order_date",
+          "share": 0.0186,
+          "importance": 0.188215,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "items_count",
+          "share": 0.0056,
+          "importance": 0.0561,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": {
+        "class": "Very late",
+        "output": "probability that delivery_status = 'Very late'",
+        "base_row": {
+          "order_date": "2024-12-31",
+          "warehouse": "Mumbai",
+          "carrier": "Carrier B",
+          "shipping_mode": "Standard",
+          "distance_km": 1048.5,
+          "package_weight_kg": 6.95,
+          "items_count": 3,
+          "dispatch_delay_hours": 15.2,
+          "peak_season": 0,
+          "weather_alert": 0
+        },
+        "changes": {
+          "shipping_mode": "Express"
+        },
+        "change_label": "shipping_mode → 'Express'",
+        "before": 0.43551895857244854,
+        "after": 0.05253208822041081,
+        "delta": -0.3829868703520377,
+        "warnings": []
+      },
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 31.4
+    },
+    {
+      "case": "Delivery",
+      "seed": 43,
+      "task_type": "tabular_classification",
+      "n_classes": 3,
+      "best_model": "logistic_regression",
+      "method": "shap_linear",
+      "n_features": 10,
+      "ranking": [
+        "shipping_mode",
+        "distance_km",
+        "carrier",
+        "dispatch_delay_hours",
+        "peak_season",
+        "weather_alert",
+        "warehouse",
+        "package_weight_kg",
+        "order_date",
+        "items_count"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "shipping_mode",
+          "share": 0.2754,
+          "importance": 2.906654,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "distance_km",
+          "share": 0.1843,
+          "importance": 1.945192,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "carrier",
+          "share": 0.177,
+          "importance": 1.868944,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "dispatch_delay_hours",
+          "share": 0.1534,
+          "importance": 1.619002,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "peak_season",
+          "share": 0.0915,
+          "importance": 0.965646,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "weather_alert",
+          "share": 0.0548,
+          "importance": 0.578508,
+          "direction": "mixed"
+        },
+        {
+          "rank": 7,
+          "feature": "warehouse",
+          "share": 0.0252,
+          "importance": 0.265586,
+          "direction": "mixed"
+        },
+        {
+          "rank": 8,
+          "feature": "package_weight_kg",
+          "share": 0.0238,
+          "importance": 0.251246,
+          "direction": "mixed"
+        },
+        {
+          "rank": 9,
+          "feature": "order_date",
+          "share": 0.0096,
+          "importance": 0.100834,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "items_count",
+          "share": 0.0052,
+          "importance": 0.054577,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": {
+        "class": "Very late",
+        "output": "probability that delivery_status = 'Very late'",
+        "base_row": {
+          "order_date": "2024-12-31",
+          "warehouse": "Mumbai",
+          "carrier": "Carrier B",
+          "shipping_mode": "Standard",
+          "distance_km": 1048.5,
+          "package_weight_kg": 6.95,
+          "items_count": 3,
+          "dispatch_delay_hours": 15.2,
+          "peak_season": 0,
+          "weather_alert": 0
+        },
+        "changes": {
+          "shipping_mode": "Express"
+        },
+        "change_label": "shipping_mode → 'Express'",
+        "before": 0.40290070119194976,
+        "after": 0.048179059005611084,
+        "delta": -0.35472164218633867,
+        "warnings": []
+      },
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 35.18
+    },
+    {
+      "case": "Delivery",
+      "seed": 44,
+      "task_type": "tabular_classification",
+      "n_classes": 3,
+      "best_model": "lightgbm",
+      "method": "shap_tree",
+      "n_features": 10,
+      "ranking": [
+        "shipping_mode",
+        "distance_km",
+        "dispatch_delay_hours",
+        "carrier",
+        "order_date",
+        "peak_season",
+        "weather_alert",
+        "package_weight_kg",
+        "warehouse",
+        "items_count"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "shipping_mode",
+          "share": 0.2719,
+          "importance": 1.558698,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "distance_km",
+          "share": 0.1988,
+          "importance": 1.139662,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "dispatch_delay_hours",
+          "share": 0.1742,
+          "importance": 0.998396,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "carrier",
+          "share": 0.1278,
+          "importance": 0.732587,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "order_date",
+          "share": 0.0647,
+          "importance": 0.371015,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "peak_season",
+          "share": 0.0541,
+          "importance": 0.310296,
+          "direction": "mixed"
+        },
+        {
+          "rank": 7,
+          "feature": "weather_alert",
+          "share": 0.0421,
+          "importance": 0.241473,
+          "direction": "mixed"
+        },
+        {
+          "rank": 8,
+          "feature": "package_weight_kg",
+          "share": 0.0322,
+          "importance": 0.184386,
+          "direction": "mixed"
+        },
+        {
+          "rank": 9,
+          "feature": "warehouse",
+          "share": 0.0225,
+          "importance": 0.129193,
+          "direction": "mixed"
+        },
+        {
+          "rank": 10,
+          "feature": "items_count",
+          "share": 0.0115,
+          "importance": 0.065928,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": {
+        "class": "Very late",
+        "output": "probability that delivery_status = 'Very late'",
+        "base_row": {
+          "order_date": "2024-12-31",
+          "warehouse": "Mumbai",
+          "carrier": "Carrier B",
+          "shipping_mode": "Standard",
+          "distance_km": 1048.5,
+          "package_weight_kg": 6.95,
+          "items_count": 3,
+          "dispatch_delay_hours": 15.2,
+          "peak_season": 0,
+          "weather_alert": 0
+        },
+        "changes": {
+          "shipping_mode": "Express"
+        },
+        "change_label": "shipping_mode → 'Express'",
+        "before": 0.49767946126214613,
+        "after": 0.2036637373420194,
+        "delta": -0.29401572392012676,
+        "warnings": []
+      },
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 155.17
+    },
+    {
+      "case": "Segments",
+      "seed": 42,
+      "task_type": "tabular_clustering",
+      "n_classes": null,
+      "best_model": "gaussian_mixture",
+      "method": "cluster_profile",
+      "n_features": 6,
+      "ranking": [
+        "online_share_pct",
+        "discount_usage_pct",
+        "annual_spend",
+        "avg_basket_value",
+        "visits_per_month",
+        "tenure_years"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "online_share_pct",
+          "share": 0.1897,
+          "importance": 0.669496,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "discount_usage_pct",
+          "share": 0.1757,
+          "importance": 0.620218,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "annual_spend",
+          "share": 0.1707,
+          "importance": 0.602513,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "avg_basket_value",
+          "share": 0.1666,
+          "importance": 0.588062,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "visits_per_month",
+          "share": 0.1524,
+          "importance": 0.53801,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "tenure_years",
+          "share": 0.145,
+          "importance": 0.511787,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 2.83
+    },
+    {
+      "case": "Segments",
+      "seed": 43,
+      "task_type": "tabular_clustering",
+      "n_classes": null,
+      "best_model": "gaussian_mixture",
+      "method": "cluster_profile",
+      "n_features": 6,
+      "ranking": [
+        "online_share_pct",
+        "discount_usage_pct",
+        "annual_spend",
+        "avg_basket_value",
+        "visits_per_month",
+        "tenure_years"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "online_share_pct",
+          "share": 0.1894,
+          "importance": 0.669409,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "discount_usage_pct",
+          "share": 0.1764,
+          "importance": 0.623472,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "annual_spend",
+          "share": 0.1709,
+          "importance": 0.604079,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "avg_basket_value",
+          "share": 0.1668,
+          "importance": 0.589323,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "visits_per_month",
+          "share": 0.1516,
+          "importance": 0.535696,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "tenure_years",
+          "share": 0.1449,
+          "importance": 0.511939,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 2.79
+    },
+    {
+      "case": "Segments",
+      "seed": 44,
+      "task_type": "tabular_clustering",
+      "n_classes": null,
+      "best_model": "gaussian_mixture",
+      "method": "cluster_profile",
+      "n_features": 6,
+      "ranking": [
+        "online_share_pct",
+        "annual_spend",
+        "visits_per_month",
+        "avg_basket_value",
+        "discount_usage_pct",
+        "tenure_years"
+      ],
+      "top10": [
+        {
+          "rank": 1,
+          "feature": "online_share_pct",
+          "share": 0.19,
+          "importance": 0.662272,
+          "direction": "mixed"
+        },
+        {
+          "rank": 2,
+          "feature": "annual_spend",
+          "share": 0.1772,
+          "importance": 0.617669,
+          "direction": "mixed"
+        },
+        {
+          "rank": 3,
+          "feature": "visits_per_month",
+          "share": 0.1741,
+          "importance": 0.606849,
+          "direction": "mixed"
+        },
+        {
+          "rank": 4,
+          "feature": "avg_basket_value",
+          "share": 0.1677,
+          "importance": 0.58477,
+          "direction": "mixed"
+        },
+        {
+          "rank": 5,
+          "feature": "discount_usage_pct",
+          "share": 0.1541,
+          "importance": 0.537394,
+          "direction": "mixed"
+        },
+        {
+          "rank": 6,
+          "feature": "tenure_years",
+          "share": 0.1369,
+          "importance": 0.477439,
+          "direction": "mixed"
+        }
+      ],
+      "what_if": null,
+      "final_state": "INSIGHT",
+      "error": null,
+      "wall_time_s": 3.07
+    }
+  ],
+  "summary": {
+    "drivers": [
+      {
+        "dataset": "Churn",
+        "task": "binary classification",
+        "runs": 3,
+        "n_features": 10,
+        "best_models": [
+          "logistic_regression",
+          "logistic_regression",
+          "logistic_regression"
+        ],
+        "methods": [
+          "shap_linear",
+          "shap_linear",
+          "shap_linear"
+        ],
+        "pairs": [
+          {
+            "seeds": [
+              42,
+              43
+            ],
+            "spearman": 0.9636363636363635,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              42,
+              44
+            ],
+            "spearman": 0.9272727272727272,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              43,
+              44
+            ],
+            "spearman": 0.9878787878787878,
+            "top5_jaccard": 1.0
+          }
+        ],
+        "spearman": [
+          0.9595959595959594,
+          0.030504381556649463
+        ],
+        "top5_jaccard": [
+          1.0,
+          0.0
+        ],
+        "top1": [
+          "contract_type",
+          "contract_type",
+          "contract_type"
+        ],
+        "top1_agree": true,
+        "top5_common": [
+          "contract_type",
+          "monthly_charges",
+          "payment_method",
+          "support_calls",
+          "tenure_months"
+        ],
+        "top5_varying": {},
+        "top5_share_range": [
+          0.0848,
+          0.3375
+        ],
+        "verdict": "stable",
+        "small_feature_set": false
+      },
+      {
+        "dataset": "Crop price",
+        "task": "regression",
+        "runs": 3,
+        "n_features": 10,
+        "best_models": [
+          "lightgbm",
+          "lightgbm",
+          "lightgbm"
+        ],
+        "methods": [
+          "shap_tree",
+          "shap_tree",
+          "shap_tree"
+        ],
+        "pairs": [
+          {
+            "seeds": [
+              42,
+              43
+            ],
+            "spearman": 0.9636363636363635,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              42,
+              44
+            ],
+            "spearman": 0.9878787878787878,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              43,
+              44
+            ],
+            "spearman": 0.9757575757575757,
+            "top5_jaccard": 1.0
+          }
+        ],
+        "spearman": [
+          0.9757575757575756,
+          0.012121212121212144
+        ],
+        "top5_jaccard": [
+          1.0,
+          0.0
+        ],
+        "top1": [
+          "yield_t_per_ha",
+          "crop",
+          "yield_t_per_ha"
+        ],
+        "top1_agree": false,
+        "top5_common": [
+          "crop",
+          "season",
+          "state",
+          "year",
+          "yield_t_per_ha"
+        ],
+        "top5_varying": {},
+        "top5_share_range": [
+          0.0427,
+          0.3873
+        ],
+        "verdict": "stable",
+        "small_feature_set": false
+      },
+      {
+        "dataset": "Store sales",
+        "task": "time-series forecasting",
+        "runs": 3,
+        "n_features": 6,
+        "best_models": [
+          "ridge",
+          "ridge",
+          "ridge"
+        ],
+        "methods": [
+          "shap_linear",
+          "shap_linear",
+          "shap_linear"
+        ],
+        "pairs": [
+          {
+            "seeds": [
+              42,
+              43
+            ],
+            "spearman": 1.0,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              42,
+              44
+            ],
+            "spearman": 1.0,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              43,
+              44
+            ],
+            "spearman": 1.0,
+            "top5_jaccard": 1.0
+          }
+        ],
+        "spearman": [
+          1.0,
+          0.0
+        ],
+        "top5_jaccard": [
+          1.0,
+          0.0
+        ],
+        "top1": [
+          "date",
+          "date",
+          "date"
+        ],
+        "top1_agree": true,
+        "top5_common": [
+          "date",
+          "day_of_week",
+          "is_promo",
+          "sales (history)",
+          "temperature_c"
+        ],
+        "top5_varying": {},
+        "top5_share_range": [
+          0.0242,
+          0.8682
+        ],
+        "verdict": "stable",
+        "small_feature_set": true
+      },
+      {
+        "dataset": "Delivery",
+        "task": "3-class classification",
+        "runs": 3,
+        "n_features": 10,
+        "best_models": [
+          "logistic_regression",
+          "logistic_regression",
+          "lightgbm"
+        ],
+        "methods": [
+          "shap_linear",
+          "shap_linear",
+          "shap_tree"
+        ],
+        "pairs": [
+          {
+            "seeds": [
+              42,
+              43
+            ],
+            "spearman": 0.9999999999999999,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              42,
+              44
+            ],
+            "spearman": 0.8545454545454544,
+            "top5_jaccard": 0.6666666666666666
+          },
+          {
+            "seeds": [
+              43,
+              44
+            ],
+            "spearman": 0.8545454545454544,
+            "top5_jaccard": 0.6666666666666666
+          }
+        ],
+        "spearman": [
+          0.9030303030303028,
+          0.0839782209730365
+        ],
+        "top5_jaccard": [
+          0.7777777777777777,
+          0.1924500897298753
+        ],
+        "top1": [
+          "shipping_mode",
+          "shipping_mode",
+          "shipping_mode"
+        ],
+        "top1_agree": true,
+        "top5_common": [
+          "carrier",
+          "dispatch_delay_hours",
+          "distance_km",
+          "shipping_mode"
+        ],
+        "top5_varying": {
+          "order_date": [
+            44
+          ],
+          "peak_season": [
+            42,
+            43
+          ]
+        },
+        "top5_share_range": [
+          0.0647,
+          0.2757
+        ],
+        "verdict": "moderately stable",
+        "small_feature_set": false
+      },
+      {
+        "dataset": "Segments",
+        "task": "clustering",
+        "runs": 3,
+        "n_features": 6,
+        "best_models": [
+          "gaussian_mixture",
+          "gaussian_mixture",
+          "gaussian_mixture"
+        ],
+        "methods": [
+          "cluster_profile",
+          "cluster_profile",
+          "cluster_profile"
+        ],
+        "pairs": [
+          {
+            "seeds": [
+              42,
+              43
+            ],
+            "spearman": 1.0,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              42,
+              44
+            ],
+            "spearman": 0.6,
+            "top5_jaccard": 1.0
+          },
+          {
+            "seeds": [
+              43,
+              44
+            ],
+            "spearman": 0.6,
+            "top5_jaccard": 1.0
+          }
+        ],
+        "spearman": [
+          0.7333333333333334,
+          0.23094010767585033
+        ],
+        "top5_jaccard": [
+          1.0,
+          0.0
+        ],
+        "top1": [
+          "online_share_pct",
+          "online_share_pct",
+          "online_share_pct"
+        ],
+        "top1_agree": true,
+        "top5_common": [
+          "annual_spend",
+          "avg_basket_value",
+          "discount_usage_pct",
+          "online_share_pct",
+          "visits_per_month"
+        ],
+        "top5_varying": {},
+        "top5_share_range": [
+          0.1516,
+          0.19
+        ],
+        "verdict": "moderately stable",
+        "small_feature_set": true
+      }
+    ],
+    "what_if": [
+      {
+        "dataset": "Churn",
+        "class": "Yes",
+        "output": "probability that churn = 'Yes'",
+        "base_row": {
+          "signup_date": "2024-12-28",
+          "region": "West",
+          "contract_type": "Month-to-month",
+          "internet_service": "Fiber optic",
+          "payment_method": "Electronic check",
+          "senior_citizen": 0,
+          "tenure_months": 25,
+          "monthly_charges": 73.43,
+          "total_charges": 1521.565,
+          "support_calls": 1
+        },
+        "change_label": "contract_type → 'Two year'",
+        "per_seed": [
+          {
+            "seed": 42,
+            "best_model": "logistic_regression",
+            "before": 0.7479923386957348,
+            "after": 0.21694558376699755,
+            "delta": -0.5310467549287372
+          },
+          {
+            "seed": 43,
+            "best_model": "logistic_regression",
+            "before": 0.7365588358963991,
+            "after": 0.21241656323354285,
+            "delta": -0.5241422726628563
+          },
+          {
+            "seed": 44,
+            "best_model": "logistic_regression",
+            "before": 0.7278851878660242,
+            "after": 0.20215617824831508,
+            "delta": -0.5257290096177091
+          }
+        ],
+        "before": [
+          0.7374787874860527,
+          0.010085093545310448
+        ],
+        "after": [
+          0.21050610841628514,
+          0.0075775330487960375
+        ],
+        "delta": [
+          -0.5269726790697675,
+          0.0036163523223620713
+        ],
+        "same_direction": true,
+        "warnings": []
+      },
+      {
+        "dataset": "Delivery",
+        "class": "Very late",
+        "output": "probability that delivery_status = 'Very late'",
+        "base_row": {
+          "order_date": "2024-12-31",
+          "warehouse": "Mumbai",
+          "carrier": "Carrier B",
+          "shipping_mode": "Standard",
+          "distance_km": 1048.5,
+          "package_weight_kg": 6.95,
+          "items_count": 3,
+          "dispatch_delay_hours": 15.2,
+          "peak_season": 0,
+          "weather_alert": 0
+        },
+        "change_label": "shipping_mode → 'Express'",
+        "per_seed": [
+          {
+            "seed": 42,
+            "best_model": "logistic_regression",
+            "before": 0.43551895857244854,
+            "after": 0.05253208822041081,
+            "delta": -0.3829868703520377
+          },
+          {
+            "seed": 43,
+            "best_model": "logistic_regression",
+            "before": 0.40290070119194976,
+            "after": 0.048179059005611084,
+            "delta": -0.35472164218633867
+          },
+          {
+            "seed": 44,
+            "best_model": "lightgbm",
+            "before": 0.49767946126214613,
+            "after": 0.2036637373420194,
+            "delta": -0.29401572392012676
+          }
+        ],
+        "before": [
+          0.44536637367551485,
+          0.048150618150445745
+        ],
+        "after": [
+          0.10145829485601376,
+          0.0885392657026044
+        ],
+        "delta": [
+          -0.34390807881950103,
+          0.045460599301687554
+        ],
+        "same_direction": true,
+        "warnings": []
+      }
+    ],
+    "interpretation": [
+      "**Overall.** Driver rankings are stable (mean Spearman ρ ≥ 0.8 and top-5 Jaccard ≥ 0.8) on 3 of 5 datasets (Churn, Crop price, Store sales). The top driver is the same under all seeds on 4 of 5 datasets (Churn, Store sales, Delivery, Segments).",
+      "**Delivery** is moderately stable: ρ = 0.903 ± 0.084, top-5 Jaccard = 0.778 ± 0.192. The top driver is shipping_mode under every seed. The selected model differs between seeds (logistic_regression (shap_linear), logistic_regression (shap_linear), lightgbm (shap_tree)), so the explanations describe different models; this is the main source of the change. Not in every top 5: order_date (seed 44); peak_season (seeds 42, 43). In the synthetic data peak_season is defined by the order month (October to December), so a model can credit the same seasonal signal to either column.",
+      "**Segments** is moderately stable: ρ = 0.733 ± 0.231, top-5 Jaccard = 1.000 ± 0.000. The top driver is online_share_pct under every seed. The same model (gaussian_mixture) was selected under every seed. The top-5 drivers have nearly equal importance shares (15.2%–19.0%), so small differences between the fitted models reorder them while the set stays the same.",
+      "**Small feature sets.** Store sales (6 drivers), Segments (6 drivers) have at most 6 drivers, so their top-5 sets overlap almost by construction; the Spearman correlation is the more informative number there.",
+      "**What-if, Churn** (contract_type → 'Two year' on the typical 'Yes' record): the probability moves from 0.737 ± 0.010 to 0.211 ± 0.008, a change of -0.527 ± 0.004; all seeds agree on the direction of the effect. The starting probability varies by 0.020 between seeds, so a single run's exact probability should be read with that margin.",
+      "**What-if, Delivery** (shipping_mode → 'Express' on the typical 'Very late' record): the probability moves from 0.445 ± 0.048 to 0.101 ± 0.089, a change of -0.344 ± 0.045; all seeds agree on the direction of the effect. The starting probability varies by 0.095 between seeds, so a single run's exact probability should be read with that margin. Under seed 44 a different model was selected (lightgbm): 0.498 → 0.204, against 0.436 → 0.053, 0.403 → 0.048 under the other seeds."
+    ]
+  }
+}

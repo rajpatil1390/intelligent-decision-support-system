@@ -138,9 +138,10 @@ def build_preprocessor(
 
 
 def clean_dataset(
-    df: pd.DataFrame, target: str | None, task_type: TaskType, profile: DatasetProfile
+    df: pd.DataFrame, target: str | None, task_type: TaskType, profile: DatasetProfile, *, time_column: str | None = None
 ) -> tuple[pd.DataFrame, list[str]]:
-    """Remove duplicate rows and rows without a target; sort time series chronologically.
+    """Remove duplicate rows and rows without a target; sort time series chronologically (by `time_column`,
+    default the first datetime column of the profile).
 
     Returns the cleaned frame and a list of human-readable steps that were applied.
     """
@@ -157,7 +158,7 @@ def clean_dataset(
             steps.append(f"Removed {int(missing.sum()):,} rows with missing target '{target}'.")
 
     if task_type == "time_series_forecasting":
-        time_columns = [name for name in profile.columns_of("datetime") if name != target]
+        time_columns = [time_column] if time_column else [name for name in profile.columns_of("datetime") if name != target]
         if time_columns:
             df = df.sort_values(time_columns[0], key=parse_datetimes, kind="stable")
             steps.append(f"Sorted rows chronologically by '{time_columns[0]}'.")

@@ -11,13 +11,14 @@ from pydantic import BaseModel, Field
 
 from idss.core.llm_client import LLMClient, LLMError
 from idss.core.logger import get_logger
-from idss.core.prompts import format_profile, render_prompt
+from idss.core.prompts import format_profile, format_requirement, render_prompt
 from idss.core.schemas import (
     TASK_DESCRIPTIONS,
     DatasetProfile,
     DatasetSpec,
     PerformanceMetric,
     ProblemSpec,
+    TaskType,
     UserRequirement,
 )
 from idss.ml.evaluator import METRIC_FAMILY_BY_TASK, METRICS, normalize_metric_name
@@ -240,6 +241,21 @@ def requirement_from_profile(question: str, profile: DatasetProfile) -> UserRequ
     return RequirementAgent(None).repair(requirement, profile)
 
 
+def align_requirement(
+    requirement: UserRequirement, task_type: TaskType, target: str | None, actionable_features: list[str]
+) -> UserRequirement:
+    """Copy of `requirement` that matches a fallback plan (v1.1), so the verifier, recommendations and report
+    describe what was actually trained. Metrics of another task family are replaced by that task's defaults."""
+    req = requirement.model_copy(deep=True)
+    notes = [f"The proposed plan was rejected; following the fallback plan ({task_type}, target '{target}')."]
+    req.problem.task_type = task_type
+    _set_target(req, target)
+    req.actionable_features = list(actionable_features)
+    RequirementAgent._repair_metrics(req, notes)
+    req.system_notes = [*req.system_notes, *notes]
+    return req
+
+
 def template_summary(req: UserRequirement) -> str:
     """Deterministic requirement summary used when the LLM is unavailable."""
     problem = req.problem
@@ -259,7 +275,7 @@ def template_summary(req: UserRequirement) -> str:
 
 
 def _requirement_json(req: UserRequirement) -> str:
-    return req.model_dump_json(exclude={"system_notes"}, indent=2)
+    return format_requirement(req)  # cleaned, in a <data> block, no server paths
 
 
 def _set_target(req: UserRequirement, target: str | None) -> None:
